@@ -823,6 +823,148 @@ def listar_todos_ativos():
 # MENU
 # =========================================================
 
+def gerar_termo_existente():
+    print("\n===== GERAR TERMO DE RESPONSABILIDADE =====")
+
+    conexao = get_connection()
+
+    if conexao is None:
+        print("Erro ao conectar com o banco.")
+        return
+
+    cursor = conexao.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT
+                e.id,
+                c.login,
+                c.nome,
+                a.serial_number,
+                a.tipo,
+                a.marca,
+                a.modelo,
+                e.data_saida
+            FROM emprestimos e
+
+            JOIN colaboradores c
+                ON c.login = e.id_colaborador
+
+            JOIN ativos a
+                ON a.serial_number = e.id_ativo
+
+            ORDER BY e.id DESC
+            """
+        )
+
+        emprestimos = cursor.fetchall()
+
+        if not emprestimos:
+            print("\nNenhum empréstimo cadastrado.")
+            return
+
+        print("\n===== EMPRÉSTIMOS CADASTRADOS =====")
+
+        for (
+            emp_id,
+            login,
+            nome,
+            serial,
+            tipo,
+            marca,
+            modelo,
+            data_saida
+        ) in emprestimos:
+
+            print("----------------------------------------")
+            print(f"ID empréstimo: {emp_id}")
+            print(f"Colaborador:   {nome} ({login})")
+            print(f"Ativo:         {tipo} {marca} {modelo}")
+            print(f"Serial:        {serial}")
+            print(f"Data saída:    {data_saida}")
+
+        print("----------------------------------------")
+
+        try:
+            id_emprestimo = int(
+                input("\nID do empréstimo para gerar o termo: ")
+            )
+        except ValueError:
+            print("Informe um ID numérico.")
+            return
+
+        cursor.execute(
+            """
+            SELECT
+                c.login,
+                c.nome,
+                c.CPF,
+                c.departamento,
+                c.cargo,
+                c.campus,
+                a.serial_number,
+                a.tipo,
+                a.marca,
+                a.modelo,
+                a.itens_entregues,
+                a.id_chamado
+            FROM emprestimos e
+
+            JOIN colaboradores c
+                ON c.login = e.id_colaborador
+
+            JOIN ativos a
+                ON a.serial_number = e.id_ativo
+
+            WHERE e.id = %s
+            """,
+            (id_emprestimo,)
+        )
+
+        resultado = cursor.fetchone()
+
+        if resultado is None:
+            print("\nEmpréstimo não encontrado.")
+            return
+
+        (
+            login,
+            nome,
+            cpf,
+            departamento,
+            cargo,
+            campus,
+            serial,
+            tipo,
+            marca,
+            modelo,
+            itens_entregues,
+            id_chamado
+        ) = resultado
+
+        gerar_termo(
+            login=login,
+            nome=nome,
+            cpf=cpf,
+            departamento=departamento,
+            cargo=cargo,
+            campus=campus,
+            serial=serial,
+            tipo=tipo,
+            marca=marca,
+            modelo=modelo,
+            itens_entregues=itens_entregues,
+            id_chamado=id_chamado
+        )
+
+    except Exception as erro:
+        print(f"\nErro ao gerar termo: {erro}")
+
+    finally:
+        cursor.close()
+        conexao.close()
+
 def exibir_menu():
     print("\n===================================")
     print("     CONTROLE DE EMPRÉSTIMOS")
@@ -833,6 +975,7 @@ def exibir_menu():
     print("4 - Listar empréstimos em aberto")
     print("5 - Listar ativos disponíveis")
     print("6 - Listar todos os ativos")
+    print("7 - Gerar/Reimprimir termo de responsabilidade")
     print("0 - Sair")
     print("===================================")
 
@@ -866,6 +1009,9 @@ def main():
 
         elif opcao == "6":
             listar_todos_ativos()
+
+        elif opcao == "7":
+            gerar_termo_existente()
 
         elif opcao == "0":
             print("\nEncerrando sistema.")
