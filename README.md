@@ -4,6 +4,8 @@ Sistema desenvolvido em Python + MySQL para controlar o empréstimo e a devoluç
 
 O projeto permite cadastrar equipamentos e colaboradores, registrar empréstimos e devoluções, gerar termos de responsabilidade automaticamente em Word e exportar relatórios para Excel.
 
+O projeto foi criado visando solucionar um problema encontrado na empresa onde trabalho como analista de suporte, onde não havia um sistema de organização de termos de ativos emprestados e devolvidos. Os termos eram gerados, assinados, scaneados em arquivos PDF e salvos em pastas compartilhadas na rede, e em caso de perda, devolução ou até mesmo para realizar consultas, era necessário abrir a pasta e procurar termo por termo em arquivos PDF.
+
 Funcionalidades
 
 O sistema possui as seguintes funcionalidades:
