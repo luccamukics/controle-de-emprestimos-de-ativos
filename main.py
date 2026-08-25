@@ -1,218 +1,682 @@
 """
-Sistema de controle de emprestimos de ativos (notebooks/celulares).
+Sistema de controle de empréstimos de ativos.
 
-Pressupoe as tabelas:
-  colaboradores (login VARCHAR(10) PK, nome, CPF, departamento, cargo, campus)
-  ativos        (id INT PK, tipo, marca_modelo, numero_serie, status)
-  emprestimos   (id INT PK, id_colaborador VARCHAR(10) FK, id_ativo INT FK,
-                 data_saida, data_devolucao_real, condicao_saida,
-                 condicao_retorno, observacoes)
+Tabelas utilizadas:
 
-Ajuste os nomes de coluna aqui se a sua tabela tiver diferencas.
+colaboradores
+    login VARCHAR(10) PRIMARY KEY
+    nome VARCHAR(40)
+    CPF VARCHAR(15)
+    departamento VARCHAR(30)
+    cargo VARCHAR(30)
+    campus VARCHAR(30)
+
+ativos
+    serial_number VARCHAR(15) PRIMARY KEY
+    tipo VARCHAR(20)
+    modelo VARCHAR(30)
+    marca VARCHAR(30)
+    at_status VARCHAR(20)
+    itens_entregues VARCHAR(30)
+    id_chamado INT
+
+emprestimos
+    id INT PRIMARY KEY AUTO_INCREMENT
+    id_colaborador VARCHAR(10) FOREIGN KEY
+    id_ativo VARCHAR(15) FOREIGN KEY
+    data_saida DATE
+    data_devolução DATE
+    condicao_saida VARCHAR(100)
+    condicao_retorno VARCHAR(100)
+    observacoes VARCHAR(255)
 """
 
 from datetime import date
 from conexao_mysql import get_connection
 
 
+# =========================================================
+# CADASTRO DE ATIVO
+# =========================================================
+
 def cadastrar_ativo():
+    print("\n===== Cadastro de ativo =====")
+
+    serial_number = input("Serial number: ").strip()
     tipo = input("Tipo (notebook/celular): ").strip()
-    marca_modelo = input("Marca/modelo: ").strip()
-    numero_serie = input("Numero de serie: ").strip()
+    marca = input("Marca: ").strip()
+    modelo = input("Modelo: ").strip()
+    itens_entregues = input(
+        "Itens entregues (carregador, mouse, etc.): "
+    ).strip()
+
+    try:
+        id_chamado = int(input("ID do chamado GLPI: "))
+    except ValueError:
+        print("ID do chamado deve ser um número inteiro.")
+        return
 
     conexao = get_connection()
+
     if conexao is None:
         return
 
     cursor = conexao.cursor()
-    cursor.execute(
-        """
-        INSERT INTO ativos (tipo, marca_modelo, numero_serie, status)
-        VALUES (%s, %s, %s, 'disponivel')
-        """,
-        (tipo, marca_modelo, numero_serie),
-    )
-    conexao.commit()
-    print(f"Ativo cadastrado com id {cursor.lastrowid}.")
 
-    cursor.close()
-    conexao.close()
+    try:
+        # Verifica se já existe ativo com esse serial
+        cursor.execute(
+            """
+            SELECT serial_number
+            FROM ativos
+            WHERE serial_number = %s
+            """,
+            (serial_number,),
+        )
 
+        if cursor.fetchone():
+            print("Já existe um ativo com esse serial number.")
+            return
+
+        cursor.execute(
+            """
+            INSERT INTO ativos
+            (
+                serial_number,
+                tipo,
+                modelo,
+                marca,
+                at_status,
+                itens_entregues,
+                id_chamado
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                serial_number,
+                tipo,
+                modelo,
+                marca,
+                "disponivel",
+                itens_entregues,
+                id_chamado,
+            ),
+        )
+
+        conexao.commit()
+
+        print("\nAtivo cadastrado com sucesso!")
+        print(f"Serial: {serial_number}")
+
+    except Exception as erro:
+        conexao.rollback()
+        print(f"Erro ao cadastrar ativo: {erro}")
+
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+# =========================================================
+# LISTAR ATIVOS DISPONÍVEIS
+# =========================================================
 
 def listar_ativos_disponiveis():
     conexao = get_connection()
+
     if conexao is None:
         return
 
     cursor = conexao.cursor()
-    cursor.execute(
-        "SELECT id, tipo, marca_modelo, numero_serie FROM ativos WHERE status = 'disponivel'"
-    )
-    ativos = cursor.fetchall()
 
-    if not ativos:
-        print("Nenhum ativo disponivel no momento.")
-    else:
-        print("\nAtivos disponiveis:")
-        for ativo_id, tipo, marca_modelo, numero_serie in ativos:
-            print(f"  [{ativo_id}] {tipo} - {marca_modelo} (serie {numero_serie})")
+    try:
+        cursor.execute(
+            """
+            SELECT
+                serial_number,
+                tipo,
+                marca,
+                modelo,
+                itens_entregues,
+                id_chamado
+            FROM ativos
+            WHERE at_status = 'disponivel'
+            ORDER BY tipo, marca, modelo
+            """
+        )
 
-    cursor.close()
-    conexao.close()
+        ativos = cursor.fetchall()
 
+        if not ativos:
+            print("\nNenhum ativo disponível no momento.")
+            return
+
+        print("\n===== Ativos disponíveis =====")
+
+        for (
+            serial,
+            tipo,
+            marca,
+            modelo,
+            itens,
+            chamado,
+        ) in ativos:
+
+            print(
+                f"\nSerial: {serial}"
+                f"\nTipo: {tipo}"
+                f"\nEquipamento: {marca} {modelo}"
+                f"\nItens: {itens}"
+                f"\nChamado GLPI: {chamado}"
+            )
+
+            print("-" * 40)
+
+    except Exception as erro:
+        print(f"Erro ao listar ativos: {erro}")
+
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+# =========================================================
+# REGISTRAR EMPRÉSTIMO
+# =========================================================
 
 def registrar_emprestimo():
     listar_ativos_disponiveis()
 
-    id_ativo = input("\nId do ativo a emprestar: ").strip()
-    login_colaborador = input("Login do colaborador: ").strip()
-    condicao_saida = input("Condicao de saida (ex: sem avarias): ").strip()
-    observacoes = input("Observacoes (opcional): ").strip()
+    print("\n===== Registrar empréstimo =====")
+
+    serial_number = input(
+        "Serial number do ativo: "
+    ).strip()
+
+    login_colaborador = input(
+        "Login do colaborador: "
+    ).strip()
+
+    condicao_saida = input(
+        "Condição de saída (ex: sem avarias): "
+    ).strip()
+
+    observacoes = input(
+        "Observações (opcional): "
+    ).strip()
 
     conexao = get_connection()
+
     if conexao is None:
         return
 
     cursor = conexao.cursor()
 
-    # confere se o ativo esta realmente disponivel antes de emprestar
-    cursor.execute("SELECT status FROM ativos WHERE id = %s", (id_ativo,))
-    resultado = cursor.fetchone()
+    try:
 
-    if resultado is None:
-        print("Ativo nao encontrado.")
-    elif resultado[0] != "disponivel":
-        print("Este ativo ja esta emprestado ou em manutencao.")
-    else:
+        # -------------------------------------------------
+        # Verifica colaborador
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            SELECT nome
+            FROM colaboradores
+            WHERE login = %s
+            """,
+            (login_colaborador,),
+        )
+
+        colaborador = cursor.fetchone()
+
+        if colaborador is None:
+            print("Colaborador não encontrado.")
+            return
+
+        # -------------------------------------------------
+        # Verifica ativo
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            SELECT at_status, tipo, marca, modelo
+            FROM ativos
+            WHERE serial_number = %s
+            """,
+            (serial_number,),
+        )
+
+        ativo = cursor.fetchone()
+
+        if ativo is None:
+            print("Ativo não encontrado.")
+            return
+
+        status, tipo, marca, modelo = ativo
+
+        if status != "disponivel":
+            print(
+                f"O ativo {serial_number} não está disponível."
+            )
+            print(f"Status atual: {status}")
+            return
+
+        # -------------------------------------------------
+        # Registra empréstimo
+        # -------------------------------------------------
+
         cursor.execute(
             """
             INSERT INTO emprestimos
-                (id_colaborador, id_ativo, data_saida, condicao_saida, observacoes)
+            (
+                id_colaborador,
+                id_ativo,
+                data_saida,
+                condicao_saida,
+                observacoes
+            )
             VALUES (%s, %s, %s, %s, %s)
             """,
-            (login_colaborador, id_ativo, date.today(), condicao_saida, observacoes),
+            (
+                login_colaborador,
+                serial_number,
+                date.today(),
+                condicao_saida,
+                observacoes,
+            ),
         )
+
+        # Guarda ID antes de executar outro comando
+        id_emprestimo = cursor.lastrowid
+
+        # -------------------------------------------------
+        # Atualiza status do ativo
+        # -------------------------------------------------
+
         cursor.execute(
-            "UPDATE ativos SET status = 'emprestado' WHERE id = %s", (id_ativo,)
+            """
+            UPDATE ativos
+            SET at_status = 'emprestado'
+            WHERE serial_number = %s
+            """,
+            (serial_number,),
         )
+
         conexao.commit()
-        print(f"Emprestimo registrado com id {cursor.lastrowid}.")
 
-    cursor.close()
-    conexao.close()
+        print("\nEmpréstimo registrado com sucesso!")
+        print(f"ID do empréstimo: {id_emprestimo}")
+        print(f"Colaborador: {colaborador[0]}")
+        print(f"Ativo: {tipo} - {marca} {modelo}")
+        print(f"Serial: {serial_number}")
 
+    except Exception as erro:
+        conexao.rollback()
+        print(f"Erro ao registrar empréstimo: {erro}")
+
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+# =========================================================
+# REGISTRAR DEVOLUÇÃO
+# =========================================================
 
 def registrar_devolucao():
     conexao = get_connection()
+
     if conexao is None:
         return
 
     cursor = conexao.cursor()
-    cursor.execute(
-        """
-        SELECT e.id, e.id_ativo, a.tipo, a.marca_modelo, e.id_colaborador
-        FROM emprestimos e
-        JOIN ativos a ON a.id = e.id_ativo
-        WHERE e.data_devolucao_real IS NULL
-        """
-    )
-    emprestimos_abertos = cursor.fetchall()
 
-    if not emprestimos_abertos:
-        print("Nao ha emprestimos em aberto.")
-        cursor.close()
-        conexao.close()
-        return
+    try:
 
-    print("\nEmprestimos em aberto:")
-    for emp_id, id_ativo, tipo, marca_modelo, login in emprestimos_abertos:
-        print(f"  [{emp_id}] {tipo} {marca_modelo} - colaborador {login}")
+        # -------------------------------------------------
+        # Lista empréstimos ainda não devolvidos
+        # -------------------------------------------------
 
-    id_emprestimo = input("\nId do emprestimo a devolver: ").strip()
-    condicao_retorno = input("Condicao de retorno (ex: sem avarias): ").strip()
+        cursor.execute(
+            """
+            SELECT
+                e.id,
+                e.id_ativo,
+                a.tipo,
+                a.marca,
+                a.modelo,
+                e.id_colaborador,
+                c.nome,
+                e.data_saida
+            FROM emprestimos e
 
-    cursor.execute(
-        "SELECT id_ativo FROM emprestimos WHERE id = %s", (id_emprestimo,)
-    )
-    resultado = cursor.fetchone()
+            JOIN ativos a
+                ON a.serial_number = e.id_ativo
 
-    if resultado is None:
-        print("Emprestimo nao encontrado.")
-    else:
-        id_ativo = resultado[0]
+            JOIN colaboradores c
+                ON c.login = e.id_colaborador
+
+            WHERE e.`data_devolução` IS NULL
+
+            ORDER BY e.data_saida
+            """
+        )
+
+        emprestimos_abertos = cursor.fetchall()
+
+        if not emprestimos_abertos:
+            print("\nNão há empréstimos em aberto.")
+            return
+
+        print("\n===== Empréstimos em aberto =====")
+
+        for (
+            emp_id,
+            serial,
+            tipo,
+            marca,
+            modelo,
+            login,
+            nome,
+            data_saida,
+        ) in emprestimos_abertos:
+
+            print(
+                f"\nID empréstimo: {emp_id}"
+                f"\nAtivo: {tipo} - {marca} {modelo}"
+                f"\nSerial: {serial}"
+                f"\nColaborador: {nome} ({login})"
+                f"\nData saída: {data_saida}"
+            )
+
+            print("-" * 40)
+
+        # -------------------------------------------------
+        # Escolha do empréstimo
+        # -------------------------------------------------
+
+        try:
+            id_emprestimo = int(
+                input("\nID do empréstimo a devolver: ")
+            )
+        except ValueError:
+            print("Informe um ID numérico.")
+            return
+
+        condicao_retorno = input(
+            "Condição de retorno: "
+        ).strip()
+
+        # -------------------------------------------------
+        # Busca empréstimo
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            SELECT id_ativo
+            FROM emprestimos
+            WHERE id = %s
+              AND `data_devolução` IS NULL
+            """,
+            (id_emprestimo,),
+        )
+
+        resultado = cursor.fetchone()
+
+        if resultado is None:
+            print(
+                "Empréstimo não encontrado "
+                "ou já foi devolvido."
+            )
+            return
+
+        serial_number = resultado[0]
+
+        # -------------------------------------------------
+        # Registra devolução
+        # -------------------------------------------------
+
         cursor.execute(
             """
             UPDATE emprestimos
-            SET data_devolucao_real = %s, condicao_retorno = %s
+            SET
+                `data_devolução` = %s,
+                condicao_retorno = %s
             WHERE id = %s
             """,
-            (date.today(), condicao_retorno, id_emprestimo),
+            (
+                date.today(),
+                condicao_retorno,
+                id_emprestimo,
+            ),
         )
+
+        # -------------------------------------------------
+        # Libera ativo novamente
+        # -------------------------------------------------
+
         cursor.execute(
-            "UPDATE ativos SET status = 'disponivel' WHERE id = %s", (id_ativo,)
+            """
+            UPDATE ativos
+            SET at_status = 'disponivel'
+            WHERE serial_number = %s
+            """,
+            (serial_number,),
         )
+
         conexao.commit()
-        print("Devolucao registrada com sucesso.")
 
-    cursor.close()
-    conexao.close()
+        print("\nDevolução registrada com sucesso!")
+        print(f"Ativo {serial_number} está disponível novamente.")
 
+    except Exception as erro:
+        conexao.rollback()
+        print(f"Erro ao registrar devolução: {erro}")
+
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+# =========================================================
+# LISTAR EMPRÉSTIMOS EM ABERTO
+# =========================================================
 
 def listar_emprestimos_ativos():
     conexao = get_connection()
+
     if conexao is None:
         return
 
     cursor = conexao.cursor()
-    cursor.execute(
-        """
-        SELECT e.id, c.nome, a.tipo, a.marca_modelo, e.data_saida
-        FROM emprestimos e
-        JOIN colaboradores c ON c.login = e.id_colaborador
-        JOIN ativos a ON a.id = e.id_ativo
-        WHERE e.data_devolucao_real IS NULL
-        """
-    )
-    emprestimos = cursor.fetchall()
 
-    if not emprestimos:
-        print("Nao ha emprestimos em aberto.")
-    else:
-        print("\nEmprestimos em aberto:")
-        for emp_id, nome, tipo, marca_modelo, data_saida in emprestimos:
-            print(f"  [{emp_id}] {nome} - {tipo} {marca_modelo} (desde {data_saida})")
+    try:
 
-    cursor.close()
-    conexao.close()
+        cursor.execute(
+            """
+            SELECT
+                e.id,
+                c.nome,
+                c.login,
+                a.tipo,
+                a.marca,
+                a.modelo,
+                a.serial_number,
+                e.data_saida,
+                e.condicao_saida
+            FROM emprestimos e
 
+            JOIN colaboradores c
+                ON c.login = e.id_colaborador
+
+            JOIN ativos a
+                ON a.serial_number = e.id_ativo
+
+            WHERE e.`data_devolução` IS NULL
+
+            ORDER BY e.data_saida
+            """
+        )
+
+        emprestimos = cursor.fetchall()
+
+        if not emprestimos:
+            print("\nNão há empréstimos em aberto.")
+            return
+
+        print("\n===== Empréstimos em aberto =====")
+
+        for (
+            emp_id,
+            nome,
+            login,
+            tipo,
+            marca,
+            modelo,
+            serial,
+            data_saida,
+            condicao_saida,
+        ) in emprestimos:
+
+            print(
+                f"\nID: {emp_id}"
+                f"\nColaborador: {nome} ({login})"
+                f"\nAtivo: {tipo} - {marca} {modelo}"
+                f"\nSerial: {serial}"
+                f"\nData saída: {data_saida}"
+                f"\nCondição saída: {condicao_saida}"
+            )
+
+            print("-" * 40)
+
+    except Exception as erro:
+        print(f"Erro ao listar empréstimos: {erro}")
+
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+# =========================================================
+# LISTAR TODOS OS ATIVOS
+# =========================================================
+
+def listar_todos_ativos():
+    conexao = get_connection()
+
+    if conexao is None:
+        return
+
+    cursor = conexao.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                serial_number,
+                tipo,
+                marca,
+                modelo,
+                at_status,
+                itens_entregues,
+                id_chamado
+            FROM ativos
+            ORDER BY tipo, marca, modelo
+            """
+        )
+
+        ativos = cursor.fetchall()
+
+        if not ativos:
+            print("\nNenhum ativo cadastrado.")
+            return
+
+        print("\n===== Todos os ativos =====")
+
+        for (
+            serial,
+            tipo,
+            marca,
+            modelo,
+            status,
+            itens,
+            chamado,
+        ) in ativos:
+
+            print(
+                f"\nSerial: {serial}"
+                f"\nTipo: {tipo}"
+                f"\nEquipamento: {marca} {modelo}"
+                f"\nStatus: {status}"
+                f"\nItens entregues: {itens}"
+                f"\nChamado GLPI: {chamado}"
+            )
+
+            print("-" * 40)
+
+    except Exception as erro:
+        print(f"Erro ao listar ativos: {erro}")
+
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+# =========================================================
+# MENU
+# =========================================================
 
 def exibir_menu():
-    print("\n===== Controle de emprestimos =====")
+    print("\n===================================")
+    print("     CONTROLE DE EMPRÉSTIMOS")
+    print("===================================")
     print("1 - Cadastrar ativo")
-    print("2 - Registrar emprestimo")
-    print("3 - Registrar devolucao")
-    print("4 - Listar emprestimos em aberto")
+    print("2 - Registrar empréstimo")
+    print("3 - Registrar devolução")
+    print("4 - Listar empréstimos em aberto")
+    print("5 - Listar ativos disponíveis")
+    print("6 - Listar todos os ativos")
     print("0 - Sair")
+    print("===================================")
 
+
+# =========================================================
+# MAIN
+# =========================================================
 
 def main():
+
     while True:
+
         exibir_menu()
-        opcao = input("Escolha uma opcao: ").strip()
+
+        opcao = input("Escolha uma opção: ").strip()
 
         if opcao == "1":
             cadastrar_ativo()
+
         elif opcao == "2":
             registrar_emprestimo()
+
         elif opcao == "3":
             registrar_devolucao()
+
         elif opcao == "4":
             listar_emprestimos_ativos()
+
+        elif opcao == "5":
+            listar_ativos_disponiveis()
+
+        elif opcao == "6":
+            listar_todos_ativos()
+
         elif opcao == "0":
-            print("Encerrando.")
+            print("\nEncerrando sistema.")
             break
+
         else:
-            print("Opcao invalida, tente novamente.")
+            print("\nOpção inválida. Tente novamente.")
 
 
 if __name__ == "__main__":
