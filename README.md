@@ -204,17 +204,13 @@ conexao_mysql.py
 
 O projeto espera que get_connection() retorne uma conexão válida com o banco.
 
-Executando o sistema
-
-Execute:
+Executando o sistema: 
+- Execute:
 
 python main.py
 
 O menu principal disponibiliza as operações do sistema:
 
-===================================
-     CONTROLE DE EMPRÉSTIMOS
-===================================
 1 - Cadastrar ativo
 2 - Registrar empréstimo
 3 - Registrar devolução
@@ -224,10 +220,9 @@ O menu principal disponibiliza as operações do sistema:
 7 - Gerar termo de responsabilidade
 8 - Relatórios
 0 - Sair
-===================================
-Controle de status
 
-Quando um ativo é cadastrado, seu status inicial é:
+Controle de status:
+- Quando um ativo é cadastrado, seu status inicial é:
 
 disponivel
 
@@ -241,6 +236,5 @@ emprestado -> disponivel
 
 Dessa forma, um equipamento emprestado não aparece na lista de ativos disponíveis para um novo empréstimo.
 
-Objetivo
-
-O objetivo do projeto é centralizar e simplificar o controle de equipamentos disponibilizados aos colaboradores, mantendo o histórico dos empréstimos, informações dos ativos, condições de entrega e devolução, documentação de responsabilidade e relatórios administrativos.
+Objetivo: 
+- O objetivo do projeto é centralizar e simplificar o controle de equipamentos disponibilizados aos colaboradores, mantendo o histórico dos empréstimos, informações dos ativos, condições de entrega e devolução, documentação de responsabilidade e relatórios administrativos.
