@@ -35,6 +35,7 @@ from datetime import date
 from conexao_mysql import get_connection
 from docxtpl import DocxTemplate
 import os
+from relatorios import menu_relatorios
 
 
 # =========================================================
@@ -976,6 +977,7 @@ def exibir_menu():
     print("5 - Listar ativos disponíveis")
     print("6 - Listar todos os ativos")
     print("7 - Gerar/Reimprimir termo de responsabilidade")
+    print("8 - Relatórios")
     print("0 - Sair")
     print("===================================")
 
@@ -1012,6 +1014,9 @@ def main():
 
         elif opcao == "7":
             gerar_termo_existente()
+
+        elif opcao == "8":
+            menu_relatorios()
 
         elif opcao == "0":
             print("\nEncerrando sistema.")
