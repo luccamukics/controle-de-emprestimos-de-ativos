@@ -25,7 +25,7 @@ emprestimos
     id_colaborador VARCHAR(10) FOREIGN KEY
     id_ativo VARCHAR(15) FOREIGN KEY
     data_saida DATE
-    data_devolução DATE
+    data_devolucao DATE
     condicao_saida VARCHAR(100)
     condicao_retorno VARCHAR(100)
     observacoes VARCHAR(255)
@@ -33,6 +33,8 @@ emprestimos
 
 from datetime import date
 from conexao_mysql import get_connection
+from docxtpl import DocxTemplate
+import os
 
 
 # =========================================================
@@ -184,6 +186,66 @@ def listar_ativos_disponiveis():
 # REGISTRAR EMPRÉSTIMO
 # =========================================================
 
+def gerar_termo(
+    login,
+    nome,
+    cpf,
+    departamento,
+    cargo,
+    campus,
+    serial,
+    tipo,
+    marca,
+    modelo,
+    itens_entregues,
+    id_chamado
+):
+    try:
+        documento = DocxTemplate(
+            "TERMO_RESPONSABILIDADE_MODELO.docx"
+        )
+
+        dados = {
+            "nome": nome,
+            "cpf": cpf,
+            "login": login,
+            "departamento": departamento,
+            "cargo": cargo,
+            "campus": campus,
+            "modelo": f"{tipo} {marca} {modelo}",
+            "serial": serial,
+            "itens_entregues": itens_entregues,
+            "id_chamado": id_chamado
+        }
+
+        documento.render(dados)
+
+        pasta = "termos"
+
+        if not os.path.exists(pasta):
+            os.makedirs(pasta)
+
+        nome_arquivo = f"TERMO_{login}_{serial}.docx"
+
+        caminho = os.path.join(
+            pasta,
+            nome_arquivo
+        )
+
+        documento.save(caminho)
+
+        print("\nTermo de responsabilidade gerado com sucesso!")
+        print(f"Arquivo: {caminho}")
+
+        return caminho
+
+    # EVITAR QUE UM PROBLEMA NO WORD ENCERRE O PROGRAMA INTEIRO
+
+    except Exception as erro:
+        print(f"\nErro ao gerar termo: {erro}")
+        return None
+
+
 def registrar_emprestimo():
     print("\n===== REGISTRAR EMPRÉSTIMO =====")
 
@@ -199,7 +261,6 @@ def registrar_emprestimo():
         # =====================================================
         # 1. DADOS DO COLABORADOR
         # =====================================================
-
         print("\n--- Dados do colaborador ---")
 
         login = input("Login: ").strip()
@@ -264,7 +325,6 @@ def registrar_emprestimo():
         # =====================================================
         # 2. MOSTRA ATIVOS DISPONÍVEIS
         # =====================================================
-
         cursor.execute(
             """
             SELECT
@@ -304,7 +364,6 @@ def registrar_emprestimo():
         # =====================================================
         # 3. ESCOLHA DO ATIVO
         # =====================================================
-
         serial_number = input(
             "\nSerial number do ativo: "
         ).strip()
@@ -317,7 +376,8 @@ def registrar_emprestimo():
                 marca,
                 modelo,
                 at_status,
-                itens_entregues
+                itens_entregues,
+                id_chamado
             FROM ativos
             WHERE serial_number = %s
             """,
@@ -337,7 +397,8 @@ def registrar_emprestimo():
             marca,
             modelo,
             status,
-            itens_entregues
+            itens_entregues,
+            id_chamado
         ) = ativo
 
         if status != "disponivel":
@@ -349,7 +410,6 @@ def registrar_emprestimo():
         # =====================================================
         # 4. DADOS DO EMPRÉSTIMO
         # =====================================================
-
         print("\n--- Dados do empréstimo ---")
 
         condicao_saida = input(
@@ -363,7 +423,6 @@ def registrar_emprestimo():
         # =====================================================
         # 5. CADASTRA O EMPRÉSTIMO
         # =====================================================
-
         cursor.execute(
             """
             INSERT INTO emprestimos (
@@ -389,7 +448,6 @@ def registrar_emprestimo():
         # =====================================================
         # 6. ALTERA STATUS DO ATIVO
         # =====================================================
-
         cursor.execute(
             """
             UPDATE ativos
@@ -402,9 +460,26 @@ def registrar_emprestimo():
         conexao.commit()
 
         # =====================================================
-        # 7. CONFIRMAÇÃO
+        # 7. GERA O TERMO DE RESPONSABILIDADE
         # =====================================================
+        gerar_termo(
+            login=login,
+            nome=nome,
+            cpf=cpf,
+            departamento=departamento,
+            cargo=cargo,
+            campus=campus,
+            serial=serial,
+            tipo=tipo,
+            marca=marca,
+            modelo=modelo,
+            itens_entregues=itens_entregues,
+            id_chamado=id_chamado
+        )
 
+        # =====================================================
+        # 8. CONFIRMAÇÃO
+        # =====================================================
         print("\n========================================")
         print("   EMPRÉSTIMO REGISTRADO COM SUCESSO")
         print("========================================")
@@ -477,7 +552,7 @@ def registrar_devolucao():
             JOIN colaboradores c
                 ON c.login = e.id_colaborador
 
-            WHERE e.`data_devolução` IS NULL
+            WHERE e.`data_devolucao` IS NULL
 
             ORDER BY e.data_saida
             """
@@ -537,7 +612,7 @@ def registrar_devolucao():
             SELECT id_ativo
             FROM emprestimos
             WHERE id = %s
-              AND `data_devolução` IS NULL
+              AND `data_devolucao` IS NULL
             """,
             (id_emprestimo,),
         )
@@ -561,7 +636,7 @@ def registrar_devolucao():
             """
             UPDATE emprestimos
             SET
-                `data_devolução` = %s,
+                `data_devolucao` = %s,
                 condicao_retorno = %s
             WHERE id = %s
             """,
@@ -633,7 +708,7 @@ def listar_emprestimos_ativos():
             JOIN ativos a
                 ON a.serial_number = e.id_ativo
 
-            WHERE e.`data_devolução` IS NULL
+            WHERE e.`data_devolucao` IS NULL
 
             ORDER BY e.data_saida
             """
