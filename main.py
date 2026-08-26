@@ -246,6 +246,101 @@ def gerar_termo(
         print(f"\nErro ao gerar termo: {erro}")
         return None
 
+# =========================================================
+# DATA POR EXTENSO
+# =========================================================
+
+def data_por_extenso(data):
+    meses = [
+        "janeiro",
+        "fevereiro",
+        "março",
+        "abril",
+        "maio",
+        "junho",
+        "julho",
+        "agosto",
+        "setembro",
+        "outubro",
+        "novembro",
+        "dezembro"
+    ]
+
+    return (
+        f"{data.day} de "
+        f"{meses[data.month - 1]} de "
+        f"{data.year}"
+    )
+
+
+# =========================================================
+# GERAR TERMO DE DEVOLUÇÃO
+# =========================================================
+
+def gerar_termo_devolucao(
+    login,
+    nome,
+    cpf,
+    serial,
+    tipo,
+    marca,
+    modelo,
+    data_devolucao,
+    condicao_retorno,
+    chamado_devolucao
+):
+    try:
+        documento = DocxTemplate(
+            "TERMO_DEVOLUCAO_MODELO.docx"
+        )
+
+        dados = {
+            "nome": nome,
+            "cpf": cpf,
+            "login": login,
+            "tipo": tipo,
+            "marca": marca,
+            "modelo": modelo,
+            "serial": serial,
+
+            "data_extenso": data_por_extenso(
+                data_devolucao
+            ),
+
+            "data_devolucao": (
+                data_devolucao.strftime("%d/%m/%Y")
+            ),
+
+            "observacoes": condicao_retorno,
+            "chamado_devolucao": chamado_devolucao
+        }
+
+        documento.render(dados)
+
+        pasta = "termos_devolucao"
+
+        if not os.path.exists(pasta):
+            os.makedirs(pasta)
+
+        nome_arquivo = (
+            f"TERMO_DEVOLUCAO_{login}_{serial}.docx"
+        )
+
+        caminho = os.path.join(
+            pasta,
+            nome_arquivo
+        )
+
+        documento.save(caminho)
+
+        print("\nTermo de devolução gerado com sucesso!")
+        print(f"Arquivo: {caminho}")
+
+        return caminho
+
+    except Exception as erro:
+        print(f"\nErro ao gerar termo de devolução: {erro}")
+        return None
 
 def registrar_emprestimo():
     print("\n===== REGISTRAR EMPRÉSTIMO =====")
@@ -521,18 +616,20 @@ def registrar_emprestimo():
 # =========================================================
 
 def registrar_devolucao():
+    print("\n===== REGISTRAR DEVOLUÇÃO =====")
+
     conexao = get_connection()
 
     if conexao is None:
+        print("Erro ao conectar com o banco.")
         return
 
     cursor = conexao.cursor()
 
     try:
-
-        # -------------------------------------------------
-        # Lista empréstimos ainda não devolvidos
-        # -------------------------------------------------
+        # =====================================================
+        # 1. LISTA EMPRÉSTIMOS EM ABERTO
+        # =====================================================
 
         cursor.execute(
             """
@@ -553,7 +650,7 @@ def registrar_devolucao():
             JOIN colaboradores c
                 ON c.login = e.id_colaborador
 
-            WHERE e.`data_devolucao` IS NULL
+            WHERE e.data_devolucao IS NULL
 
             ORDER BY e.data_saida
             """
@@ -565,7 +662,7 @@ def registrar_devolucao():
             print("\nNão há empréstimos em aberto.")
             return
 
-        print("\n===== Empréstimos em aberto =====")
+        print("\n===== EMPRÉSTIMOS EM ABERTO =====")
 
         for (
             emp_id,
@@ -575,82 +672,127 @@ def registrar_devolucao():
             modelo,
             login,
             nome,
-            data_saida,
+            data_saida
         ) in emprestimos_abertos:
 
-            print(
-                f"\nID empréstimo: {emp_id}"
-                f"\nAtivo: {tipo} - {marca} {modelo}"
-                f"\nSerial: {serial}"
-                f"\nColaborador: {nome} ({login})"
-                f"\nData saída: {data_saida}"
-            )
+            print("----------------------------------------")
+            print(f"ID empréstimo: {emp_id}")
+            print(f"Colaborador:   {nome} ({login})")
+            print(f"Ativo:         {tipo} {marca} {modelo}")
+            print(f"Serial:        {serial}")
+            print(f"Data saída:    {data_saida}")
 
-            print("-" * 40)
+        print("----------------------------------------")
 
-        # -------------------------------------------------
-        # Escolha do empréstimo
-        # -------------------------------------------------
+        # =====================================================
+        # 2. ESCOLHE O EMPRÉSTIMO
+        # =====================================================
 
         try:
             id_emprestimo = int(
                 input("\nID do empréstimo a devolver: ")
             )
+
         except ValueError:
-            print("Informe um ID numérico.")
+            print("\nInforme um ID numérico.")
             return
 
-        condicao_retorno = input(
-            "Condição de retorno: "
-        ).strip()
-
-        # -------------------------------------------------
-        # Busca empréstimo
-        # -------------------------------------------------
+        # =====================================================
+        # 3. BUSCA OS DADOS DO EMPRÉSTIMO
+        # =====================================================
 
         cursor.execute(
             """
-            SELECT id_ativo
-            FROM emprestimos
-            WHERE id = %s
-              AND `data_devolucao` IS NULL
+            SELECT
+                e.id_ativo,
+                e.data_saida,
+                c.login,
+                c.nome,
+                c.CPF,
+                a.tipo,
+                a.marca,
+                a.modelo
+            FROM emprestimos e
+
+            JOIN colaboradores c
+                ON c.login = e.id_colaborador
+
+            JOIN ativos a
+                ON a.serial_number = e.id_ativo
+
+            WHERE e.id = %s
+              AND e.data_devolucao IS NULL
             """,
-            (id_emprestimo,),
+            (id_emprestimo,)
         )
 
         resultado = cursor.fetchone()
 
         if resultado is None:
             print(
-                "Empréstimo não encontrado "
+                "\nEmpréstimo não encontrado "
                 "ou já foi devolvido."
             )
             return
 
-        serial_number = resultado[0]
+        (
+            serial_number,
+            data_saida,
+            login,
+            nome,
+            cpf,
+            tipo,
+            marca,
+            modelo
+        ) = resultado
 
-        # -------------------------------------------------
-        # Registra devolução
-        # -------------------------------------------------
+        # =====================================================
+        # 4. DADOS DA DEVOLUÇÃO
+        # =====================================================
+
+        print("\n--- Dados da devolução ---")
+
+        condicao_retorno = input(
+            "Condição de retorno / Observação: "
+        ).strip()
+
+        try:
+            chamado_devolucao = int(
+                input("Chamado GLPI de devolução: ")
+            )
+
+        except ValueError:
+            print(
+                "\nO chamado GLPI deve ser um número inteiro."
+            )
+            return
+
+        data_devolucao = date.today()
+
+        # =====================================================
+        # 5. ATUALIZA O EMPRÉSTIMO
+        # =====================================================
 
         cursor.execute(
             """
             UPDATE emprestimos
             SET
-                `data_devolucao` = %s,
-                condicao_retorno = %s
+                data_devolucao = %s,
+                condicao_retorno = %s,
+                chamado_devolucao = %s
             WHERE id = %s
             """,
             (
-                date.today(),
+                data_devolucao,
                 condicao_retorno,
-                id_emprestimo,
-            ),
+                chamado_devolucao,
+                id_emprestimo
+            )
         )
 
-        # -------------------------------------------------
-        # Libera ativo novamente
-        # -------------------------------------------------
+        # =====================================================
+        # 6. LIBERA O ATIVO
+        # =====================================================
 
         cursor.execute(
             """
@@ -658,21 +800,64 @@ def registrar_devolucao():
             SET at_status = 'disponivel'
             WHERE serial_number = %s
             """,
-            (serial_number,),
+            (serial_number,)
         )
 
         conexao.commit()
 
-        print("\nDevolução registrada com sucesso!")
-        print(f"Ativo {serial_number} está disponível novamente.")
+        # =====================================================
+        # 7. GERA O TERMO DE DEVOLUÇÃO
+        # =====================================================
+
+        gerar_termo_devolucao(
+            login=login,
+            nome=nome,
+            cpf=cpf,
+            serial=serial_number,
+            tipo=tipo,
+            marca=marca,
+            modelo=modelo,
+            data_devolucao=data_devolucao,
+            condicao_retorno=condicao_retorno,
+            chamado_devolucao=chamado_devolucao
+        )
+
+        # =====================================================
+        # 8. CONFIRMAÇÃO
+        # =====================================================
+
+        print("\n========================================")
+        print("     DEVOLUÇÃO REGISTRADA COM SUCESSO")
+        print("========================================")
+
+        print(f"ID empréstimo:    {id_emprestimo}")
+        print(f"Colaborador:      {nome}")
+        print(f"CPF:              {cpf}")
+
+        print("\nATIVO")
+        print(f"Serial:           {serial_number}")
+        print(f"Tipo:             {tipo}")
+        print(f"Marca:            {marca}")
+        print(f"Modelo:           {modelo}")
+
+        print(f"\nData saída:       {data_saida}")
+        print(f"Data devolução:   {data_devolucao}")
+        print(f"Condição retorno: {condicao_retorno}")
+        print(f"Chamado GLPI:     {chamado_devolucao}")
+
+        print("\nStatus do ativo: disponivel")
+
+        print("========================================")
 
     except Exception as erro:
         conexao.rollback()
-        print(f"Erro ao registrar devolução: {erro}")
+        print(f"\nErro ao registrar devolução: {erro}")
 
     finally:
         cursor.close()
         conexao.close()
+
+
 
 
 # =========================================================
