@@ -29,6 +29,8 @@ emprestimos
     condicao_saida VARCHAR(100)
     condicao_retorno VARCHAR(100)
     observacoes VARCHAR(255)
+
+Sistema criado por Lucca da Silva Mukics
 """
 
 from datetime import date
