@@ -38,7 +38,7 @@ def gerar_termo(
 
         documento.render(dados)
 
-        pasta = "termos"
+        pasta = "termos_empréstimos"
 
         if not os.path.exists(pasta):
             os.makedirs(pasta)
