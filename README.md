@@ -1,280 +1,91 @@
-Sistema de Controle de Empréstimos de Ativos
+# Controle de Empréstimos de Ativos
 
-## Interface gráfica
+Aplicação de desktop em Python para controlar ativos, empréstimos e devoluções em um banco MySQL. A interface gráfica permite cadastrar e consultar equipamentos, registrar movimentações, gerar termos em Word e exportar relatórios em Excel.
 
-### Atualização: empresa, patrimônio e manutenção de ativos
+O projeto surgiu da necessidade de centralizar o controle de equipamentos e localizar seus termos de entrega e devolução sem procurar documento por documento em pastas compartilhadas.
 
-Antes de usar a nova versão, faça um backup do banco e execute uma única vez
-`migracao_empresa_patrimonio.sql` no banco `controle_emprestimos`.
-A migração adiciona `empresa` e `patrimonio` à tabela `ativos`; os registros
-anteriores mantêm seus dados e ficam sem empresa até serem editados.
+## Funcionalidades
 
-Na aba Ativos, selecione Arklok ou Vivo antes do serial. O campo Patrimônio
-só pode ser preenchido quando a empresa é Arklok. É possível editar o ativo
-selecionado, inclusive o serial. Se houver empréstimos anteriores, eles passam
-a referenciar o novo serial na mesma transação. Ao excluir um ativo com
-empréstimos já devolvidos, a confirmação mostra quantos registros históricos
-também serão apagados. Ativos com empréstimo em aberto precisam ser devolvidos
-antes da exclusão.
+- Cadastro, consulta, edição e exclusão de ativos.
+- Seleção da empresa responsável (`Arklok` ou `Vivo`). O patrimônio pode ser informado apenas para ativos da Arklok; esses campos servem ao controle interno e não aparecem nos termos.
+- Cadastro de colaboradores durante o registro de um empréstimo, com reaproveitamento dos dados existentes.
+- Registro de empréstimos e devoluções, com atualização do status do ativo e geração de termos DOCX.
+- Reemissão de termos de responsabilidade, consulta de empréstimos em aberto e exportação de relatórios por empréstimo ou departamento.
 
-Os relatórios Excel são salvos na pasta `Planilha de Controle` na raiz do
-projeto. Empresa e Patrimônio não são incluídos nos termos Word.
+## Requisitos e instalação
 
-Execute `python main.py` na pasta do projeto (ou rode `main.py` no PyCharm) para
-abrir a janela do sistema. Ela permite cadastrar e consultar ativos, registrar
-empréstimos e devoluções, reimprimir termos e exportar relatórios para Excel.
-Para usar o menu de texto anterior, execute `python main.py --cli`.
+- Python com Tkinter (incluído na instalação usual do Python para Windows).
+- MySQL com o banco `controle_emprestimos` e as tabelas `colaboradores`, `ativos` e `emprestimos` já criadas. O projeto não inclui um script completo de criação inicial dessas tabelas.
+- Os modelos `TERMO_RESPONSABILIDADE_MODELO.docx` e `TERMO_DEVOLUCAO_MODELO.docx` na raiz do projeto.
 
-As duas interfaces compartilham as operações de `modulos/servicos.py`. O arquivo
-`.env` deve permanecer na pasta do projeto, assim como os dois modelos DOCX.
-Instale as dependências no ambiente Python do projeto:
+Na pasta do projeto, crie um ambiente virtual e instale as dependências:
 
-```bash
-pip install mysql-connector-python python-dotenv docxtpl openpyxl
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install mysql-connector-python python-dotenv docxtpl openpyxl
 ```
 
-O banco existente continua sendo usado. A devolução pressupõe a coluna
-`chamado_devolucao` em `emprestimos`, como já ocorria no programa anterior.
-Se a criação de um termo falhar após um empréstimo ou devolução, a operação já
-estará gravada no banco; a interface exibirá um aviso para conferir o modelo.
+Crie um arquivo `.env` na raiz com os dados de acesso ao seu MySQL:
 
-Sistema desenvolvido em Python + MySQL para controlar o empréstimo e a devolução de ativos de tecnologia, como notebooks e celulares.
+```dotenv
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=seu_usuario
+DB_PASSWORD=sua_senha
+DB_NAME=controle_emprestimos
+```
 
-O projeto permite cadastrar equipamentos e colaboradores, registrar empréstimos e devoluções, gerar termos de responsabilidade automaticamente em Word e exportar relatórios para Excel.
+Mantenha o `.env` fora dos commits para não publicar credenciais.
 
-O projeto foi criado visando solucionar um problema encontrado na empresa onde trabalho como analista de suporte, onde não havia um sistema de organização de termos de ativos emprestados e devolvidos. Os termos eram gerados, assinados, scaneados em arquivos PDF e salvos em pastas compartilhadas na rede, e em caso de perda, devolução ou até mesmo para realizar consultas, era necessário abrir a pasta e procurar termo por termo em arquivos PDF.
+### Atualização de um banco existente
 
-Funcionalidades
+Se o banco ainda não tiver as colunas `empresa` e `patrimonio` na tabela `ativos`, faça um backup e execute **uma única vez** `migracao_empresa_patrimonio.sql`. O script adiciona as duas colunas e uma restrição de unicidade para o patrimônio. Ativos existentes continuam cadastrados, inicialmente sem empresa definida. Não execute a migração outra vez se as colunas já existirem.
 
-O sistema possui as seguintes funcionalidades:
+A tabela `emprestimos` também precisa conter a coluna `chamado_devolucao`, utilizada pelo registro de devoluções.
 
-Cadastro de ativos
-Cadastro automático de colaboradores durante o empréstimo
-Registro de empréstimos
-Registro de devoluções
-Controle do status dos ativos
-Listagem de ativos disponíveis
-Listagem de todos os ativos
-Listagem de empréstimos em aberto
-Geração automática de termo de responsabilidade em .docx
-Reemissão de termos de responsabilidade
-Relatório de empréstimos em aberto
-Relatório de ativos emprestados por departamento
-Exportação de relatórios para Excel
-Tecnologias utilizadas
-Python
-MySQL
-MySQL Connector
-docxtpl
-openpyxl
-Microsoft Word para o modelo do termo de responsabilidade
-Estrutura do projeto
-projeto/
-│
-├── main.py
-├── conexao_mysql.py
-├── relatorios.py
-├── TERMO_RESPONSABILIDADE_MODELO.docx
-│
-└── termos/
-    └── TERMO_login_serial.docx
-main.py
+## Execução
 
-Arquivo principal do sistema. Contém o menu e as funções responsáveis pelo cadastro de ativos, empréstimos, devoluções e geração dos termos.
+Abra a interface gráfica com:
 
-conexao_mysql.py
-
-Responsável pela conexão entre a aplicação Python e o banco de dados MySQL.
-
-relatorios.py
-
-Contém as funções responsáveis pela geração e exportação dos relatórios para Excel.
-
-TERMO_RESPONSABILIDADE_MODELO.docx
-
-Modelo utilizado pelo sistema para gerar automaticamente o termo de responsabilidade do colaborador.
-
-termos/
-
-Pasta criada automaticamente para armazenar os termos de responsabilidade gerados pelo sistema.
-
-Banco de dados
-
-O sistema utiliza três tabelas principais.
-
-Colaboradores
-
-Armazena os dados dos colaboradores:
-
-login
-nome
-CPF
-departamento
-cargo
-campus
-
-O campo login é utilizado como chave primária.
-
-Ativos
-
-Armazena os equipamentos cadastrados:
-
-serial_number
-tipo
-modelo
-marca
-at_status
-itens_entregues
-id_chamado
-
-O campo serial_number é a chave primária do ativo.
-
-O campo at_status permite controlar se o equipamento está, por exemplo:
-
-disponivel
-emprestado
-Empréstimos
-
-Relaciona colaboradores e ativos:
-
-id
-id_colaborador
-id_ativo
-data_saida
-data_devolucao
-condicao_saida
-condicao_retorno
-observacoes
-
-id_colaborador referencia o login da tabela colaboradores.
-
-id_ativo referencia o serial_number da tabela ativos.
-
-Fluxo de empréstimo
-
-Ao registrar um empréstimo, o sistema solicita o login do colaborador.
-
-Se o colaborador já estiver cadastrado, seus dados são recuperados automaticamente. Caso contrário, o sistema solicita:
-
-Nome
-CPF
-Departamento
-Cargo
-Campus
-
-Em seguida, são apresentados os ativos disponíveis.
-
-Após a escolha do equipamento, o sistema:
-
-Registra o empréstimo no MySQL.
-Altera o status do ativo para emprestado.
-Gera automaticamente o termo de responsabilidade.
-Salva o documento na pasta termos.
-
-Exemplo:
-
-termos/TERMO_teste01_teste001.docx
-Termo de responsabilidade
-
-O termo é gerado a partir de:
-
-TERMO_RESPONSABILIDADE_MODELO.docx
-
-O modelo utiliza campos como:
-
-{{ nome }}
-{{ cpf }}
-{{ login }}
-{{ departamento }}
-{{ cargo }}
-{{ campus }}
-{{ modelo }}
-{{ serial }}
-{{ itens_entregues }}
-{{ id_chamado }}
-
-O Python substitui esses campos pelos dados armazenados no MySQL.
-
-O termo contém dados do colaborador e do equipamento, incluindo nome, CPF, login, departamento, cargo, campus, modelo, serial/patrimônio, itens entregues e chamado GLPI, seguindo a estrutura do termo utilizado no projeto.
-
-Relatórios
-
-O sistema permite gerar relatórios dos empréstimos.
-
-Empréstimos em aberto
-
-Apresenta informações como:
-
-ID empréstimo
-Colaborador
-Tipo
-Marca
-Modelo
-Serial
-Data saída
-Dias em aberto
-Chamado GLPI
-
-O relatório pode ser exportado para:
-
-relatorio_emprestimos_abertos.xlsx
-Ativos por departamento
-
-Apresenta a quantidade de ativos atualmente emprestados agrupados por departamento.
-
-O relatório pode ser exportado para:
-
-relatorio_departamentos.xlsx
-Instalação
-
-Instale as dependências necessárias:
-
-pip install mysql-connector-python
-pip install docxtpl
-pip install openpyxl
-
-Ou:
-
-python -m pip install mysql-connector-python docxtpl openpyxl
-Configuração do banco
-
-Configure os dados de acesso ao MySQL no arquivo:
-
-conexao_mysql.py
-
-O projeto espera que get_connection() retorne uma conexão válida com o banco.
-
-Executando o sistema: 
-- Execute:
-
+```powershell
 python main.py
+```
 
-O menu principal disponibiliza as operações do sistema:
+Para usar o menu de texto:
 
-1 - Cadastrar ativo
-2 - Registrar empréstimo
-3 - Registrar devolução
-4 - Listar empréstimos em aberto
-5 - Listar ativos disponíveis
-6 - Listar todos os ativos
-7 - Gerar termo de responsabilidade
-8 - Relatórios
-0 - Sair
+```powershell
+python main.py --cli
+```
 
-Controle de status:
-- Quando um ativo é cadastrado, seu status inicial é:
+Na aba **Ativos**, selecione um equipamento para editá-lo ou excluí-lo. A edição permite alterar todos os dados, inclusive o número de série; empréstimos anteriores passam a referenciar o novo serial. Um ativo com empréstimo em aberto só pode ser excluído depois da devolução. Se houver empréstimos já encerrados, a confirmação de exclusão informa quantos registros históricos também serão apagados do banco. Os termos DOCX gerados anteriormente permanecem nas pastas.
 
-disponivel
+Na aba **Empréstimos**, registre empréstimos ou devoluções e consulte as operações em aberto. A criação de um termo ocorre depois da gravação no banco: se o documento falhar, confira o aviso na interface e o modelo DOCX antes de tentar gerar o termo novamente.
 
-Ao registrar um empréstimo:
+Na aba **Relatórios**, consulte os empréstimos em aberto e os ativos emprestados por departamento e exporte as planilhas.
 
-disponivel -> emprestado
+## Arquivos e pastas
 
-Ao registrar a devolução:
+| Caminho | Finalidade |
+| --- | --- |
+| `main.py` | Entrada da interface gráfica e do menu de texto. |
+| `interface_grafica.py` | Janelas e formulários Tkinter. |
+| `conexao_mysql.py` | Conexão MySQL configurada pelo `.env`. |
+| `modulos/servicos.py` | Operações compartilhadas de banco e validações. |
+| `modulos/ativos.py`, `modulos/emprestimos.py` | Opções do menu de texto. |
+| `modulos/termos.py` | Geração dos documentos a partir dos modelos Word. |
+| `modulos/relatorios.py` | Consultas e exportação das planilhas. |
+| `migracao_empresa_patrimonio.sql` | Atualização de bancos anteriores. |
+| `termos_empréstimos/` | Termos de responsabilidade gerados. |
+| `termos_devolucao/` | Termos de devolução gerados. |
+| `Planilha de Controle/` | Relatórios Excel exportados. |
 
-emprestado -> disponivel
+As pastas de saída são criadas conforme os documentos e relatórios são gerados. Os arquivos resultantes contêm dados operacionais; revise-os antes de adicioná-los ao Git.
 
-Dessa forma, um equipamento emprestado não aparece na lista de ativos disponíveis para um novo empréstimo.
+## Dados usados
 
-Objetivo: 
-- O objetivo do projeto é centralizar e simplificar o controle de equipamentos disponibilizados aos colaboradores, mantendo o histórico dos empréstimos, informações dos ativos, condições de entrega e devolução, documentação de responsabilidade e relatórios administrativos.
+- **Ativos:** empresa, número de série (chave primária), patrimônio, tipo, marca, modelo, status, itens entregues e chamado.
+- **Colaboradores:** login (chave primária), nome, CPF, departamento, cargo e campus.
+- **Empréstimos:** identificador, colaborador, ativo, datas de saída e devolução, condições, observações e chamado de devolução.
+
+Ao emprestar um ativo, seu status muda de `disponivel` para `emprestado`. Ao registrar a devolução, volta para `disponivel`.
