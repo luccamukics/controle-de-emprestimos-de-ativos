@@ -1,0 +1,21 @@
+ATUALIZACAO DA INTERFACE GRAFICA
+
+1. Faca uma copia de seguranca da sua pasta controle-de-emprestimos-de-ativos.
+2. Faca um backup do banco controle_emprestimos. No MySQL Workbench, selecione
+   esse banco e execute migracao_empresa_patrimonio.sql UMA UNICA VEZ.
+   Isso adiciona empresa e patrimonio sem apagar os ativos existentes.
+   Os ativos antigos ficarao sem empresa ate voce edita-los.
+3. Copie os arquivos deste ZIP para a pasta do projeto, substituindo os arquivos
+   de mesmo nome. Preserve a pasta modulos e sua estrutura.
+4. Mantenha seu .env, os modelos TERMO_RESPONSABILIDADE_MODELO.docx e
+   TERMO_DEVOLUCAO_MODELO.docx na pasta do projeto. Eles nao estao neste ZIP.
+5. No PyCharm, execute main.py para abrir a interface grafica.
+   Se quiser usar o menu anterior, execute: python main.py --cli
+6. Instale no seu ambiente as dependencias se ainda nao estiverem instaladas:
+   pip install mysql-connector-python python-dotenv docxtpl openpyxl
+
+O botao Excluir ativo mostra quantos emprestimos ja devolvidos serao apagados
+junto com o ativo. Um emprestimo ainda em aberto impede a exclusao ate a
+devolucao ser registrada. Os arquivos DOCX ja gerados nao sao apagados.
+As planilhas passam a ser salvas em "Planilha de Controle" na raiz do projeto.
+Empresa e patrimonio sao somente para controle interno e nao entram nos termos.

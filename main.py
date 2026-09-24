@@ -111,4 +111,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if "--cli" in sys.argv[1:]:
+        main()
+    else:
+        from interface_grafica import main as abrir_interface
+
+        abrir_interface()

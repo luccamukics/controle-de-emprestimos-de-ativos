@@ -1,211 +1,50 @@
-from conexao_mysql import get_connection
+"""Menu de texto dos ativos; a interface usa as mesmas operações de serviço."""
 
-# =========================================================
-# CADASTRO DE ATIVO
-# =========================================================
+from modulos import servicos
+
 
 def cadastrar_ativo():
     print("\n===== Cadastro de ativo =====")
-
-    serial_number = input("Serial number: ").strip()
+    print("Empresa: 1 - Arklok | 2 - Vivo")
+    empresa = {"1": "Arklok", "2": "Vivo"}.get(input("Escolha a empresa: ").strip())
+    serial = input("Serial number: ").strip()
+    patrimonio = input("Patrimônio (opcional): ").strip() if empresa == "Arklok" else None
     tipo = input("Tipo (notebook/celular): ").strip()
     marca = input("Marca: ").strip()
     modelo = input("Modelo: ").strip()
-    itens_entregues = input(
-        "Itens entregues (carregador, mouse, etc.): "
-    ).strip()
-
+    itens = input("Itens entregues (carregador, mouse, etc.): ").strip()
+    chamado = input("ID do chamado GLPI: ").strip()
     try:
-        id_chamado = int(input("ID do chamado GLPI: "))
-    except ValueError:
-        print("ID do chamado deve ser um número inteiro.")
-        return
-
-    conexao = get_connection()
-
-    if conexao is None:
-        return
-
-    cursor = conexao.cursor()
-
-    try:
-        # Verifica se já existe ativo com esse serial
-        cursor.execute(
-            """
-            SELECT serial_number
-            FROM ativos
-            WHERE serial_number = %s
-            """,
-            (serial_number,),
-        )
-
-        if cursor.fetchone():
-            print("Já existe um ativo com esse serial number.")
-            return
-
-        cursor.execute(
-            """
-            INSERT INTO ativos
-            (
-                serial_number,
-                tipo,
-                modelo,
-                marca,
-                at_status,
-                itens_entregues,
-                id_chamado
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """,
-            (
-                serial_number,
-                tipo,
-                modelo,
-                marca,
-                "disponivel",
-                itens_entregues,
-                id_chamado,
-            ),
-        )
-
-        conexao.commit()
-
-        print("\nAtivo cadastrado com sucesso!")
-        print(f"Serial: {serial_number}")
-
+        servicos.cadastrar_ativo(serial, tipo, marca, modelo, itens, chamado,
+                                 empresa, patrimonio)
+        print(f"\nAtivo cadastrado com sucesso! Serial: {serial}")
     except Exception as erro:
-        conexao.rollback()
         print(f"Erro ao cadastrar ativo: {erro}")
 
-    finally:
-        cursor.close()
-        conexao.close()
 
+def _listar(disponiveis):
+    try:
+        ativos = servicos.listar_ativos(disponiveis)
+        if not ativos:
+            print("\nNenhum ativo disponível." if disponiveis else "\nNenhum ativo cadastrado.")
+            return
+        print("\n===== Ativos disponíveis =====" if disponiveis else "\n===== Todos os ativos =====")
+        for empresa, serial, patrimonio, tipo, marca, modelo, status, itens, chamado in ativos:
+            print(f"\nEmpresa: {empresa or 'Não informada'}\nSerial: {serial}")
+            if patrimonio:
+                print(f"Patrimônio: {patrimonio}")
+            print(f"Tipo: {tipo}\nEquipamento: {marca} {modelo}")
+            if not disponiveis:
+                print(f"Status: {status}")
+            print(f"Itens entregues: {itens}\nChamado GLPI: {chamado}")
+            print("-" * 40)
+    except Exception as erro:
+        print(f"Erro ao listar ativos: {erro}")
 
-# =========================================================
-# LISTAR ATIVOS DISPONÍVEIS
-# =========================================================
 
 def listar_ativos_disponiveis():
-    conexao = get_connection()
+    _listar(True)
 
-    if conexao is None:
-        return
-
-    cursor = conexao.cursor()
-
-    try:
-        cursor.execute(
-            """
-            SELECT
-                serial_number,
-                tipo,
-                marca,
-                modelo,
-                itens_entregues,
-                id_chamado
-            FROM ativos
-            WHERE at_status = 'disponivel'
-            ORDER BY tipo, marca, modelo
-            """
-        )
-
-        ativos = cursor.fetchall()
-
-        if not ativos:
-            print("\nNenhum ativo disponível no momento.")
-            return
-
-        print("\n===== Ativos disponíveis =====")
-
-        for (
-            serial,
-            tipo,
-            marca,
-            modelo,
-            itens,
-            chamado,
-        ) in ativos:
-
-            print(
-                f"\nSerial: {serial}"
-                f"\nTipo: {tipo}"
-                f"\nEquipamento: {marca} {modelo}"
-                f"\nItens: {itens}"
-                f"\nChamado GLPI: {chamado}"
-            )
-
-            print("-" * 40)
-
-    except Exception as erro:
-        print(f"Erro ao listar ativos: {erro}")
-
-    finally:
-        cursor.close()
-        conexao.close()
-
-
-# =========================================================
-# LISTAR TODOS OS ATIVOS
-# =========================================================
 
 def listar_todos_ativos():
-    conexao = get_connection()
-
-    if conexao is None:
-        return
-
-    cursor = conexao.cursor()
-
-    try:
-
-        cursor.execute(
-            """
-            SELECT
-                serial_number,
-                tipo,
-                marca,
-                modelo,
-                at_status,
-                itens_entregues,
-                id_chamado
-            FROM ativos
-            ORDER BY tipo, marca, modelo
-            """
-        )
-
-        ativos = cursor.fetchall()
-
-        if not ativos:
-            print("\nNenhum ativo cadastrado.")
-            return
-
-        print("\n===== Todos os ativos =====")
-
-        for (
-            serial,
-            tipo,
-            marca,
-            modelo,
-            status,
-            itens,
-            chamado,
-        ) in ativos:
-
-            print(
-                f"\nSerial: {serial}"
-                f"\nTipo: {tipo}"
-                f"\nEquipamento: {marca} {modelo}"
-                f"\nStatus: {status}"
-                f"\nItens entregues: {itens}"
-                f"\nChamado GLPI: {chamado}"
-            )
-
-            print("-" * 40)
-
-    except Exception as erro:
-        print(f"Erro ao listar ativos: {erro}")
-
-    finally:
-        cursor.close()
-        conexao.close()
+    _listar(False)

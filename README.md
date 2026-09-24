@@ -1,5 +1,43 @@
 Sistema de Controle de Empréstimos de Ativos
 
+## Interface gráfica
+
+### Atualização: empresa, patrimônio e manutenção de ativos
+
+Antes de usar a nova versão, faça um backup do banco e execute uma única vez
+`migracao_empresa_patrimonio.sql` no banco `controle_emprestimos`.
+A migração adiciona `empresa` e `patrimonio` à tabela `ativos`; os registros
+anteriores mantêm seus dados e ficam sem empresa até serem editados.
+
+Na aba Ativos, selecione Arklok ou Vivo antes do serial. O campo Patrimônio
+só pode ser preenchido quando a empresa é Arklok. É possível editar o ativo
+selecionado, inclusive o serial. Se houver empréstimos anteriores, eles passam
+a referenciar o novo serial na mesma transação. Ao excluir um ativo com
+empréstimos já devolvidos, a confirmação mostra quantos registros históricos
+também serão apagados. Ativos com empréstimo em aberto precisam ser devolvidos
+antes da exclusão.
+
+Os relatórios Excel são salvos na pasta `Planilha de Controle` na raiz do
+projeto. Empresa e Patrimônio não são incluídos nos termos Word.
+
+Execute `python main.py` na pasta do projeto (ou rode `main.py` no PyCharm) para
+abrir a janela do sistema. Ela permite cadastrar e consultar ativos, registrar
+empréstimos e devoluções, reimprimir termos e exportar relatórios para Excel.
+Para usar o menu de texto anterior, execute `python main.py --cli`.
+
+As duas interfaces compartilham as operações de `modulos/servicos.py`. O arquivo
+`.env` deve permanecer na pasta do projeto, assim como os dois modelos DOCX.
+Instale as dependências no ambiente Python do projeto:
+
+```bash
+pip install mysql-connector-python python-dotenv docxtpl openpyxl
+```
+
+O banco existente continua sendo usado. A devolução pressupõe a coluna
+`chamado_devolucao` em `emprestimos`, como já ocorria no programa anterior.
+Se a criação de um termo falhar após um empréstimo ou devolução, a operação já
+estará gravada no banco; a interface exibirá um aviso para conferir o modelo.
+
 Sistema desenvolvido em Python + MySQL para controlar o empréstimo e a devolução de ativos de tecnologia, como notebooks e celulares.
 
 O projeto permite cadastrar equipamentos e colaboradores, registrar empréstimos e devoluções, gerar termos de responsabilidade automaticamente em Word e exportar relatórios para Excel.

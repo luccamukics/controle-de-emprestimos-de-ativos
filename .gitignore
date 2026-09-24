@@ -4,4 +4,7 @@
 __pycache__/
 *.pyc
 
-.idea/
+.idea/__pycache__/
+*.pyc
+relatorio_*.xlsx
+termos_*/

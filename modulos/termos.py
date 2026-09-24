@@ -1,6 +1,8 @@
 from docxtpl import DocxTemplate
 import os
-from conexao_mysql import get_connection
+from pathlib import Path
+
+PASTA_PROJETO = Path(__file__).resolve().parent.parent
 
 def gerar_termo(
 
@@ -19,9 +21,7 @@ def gerar_termo(
 ):
 
     try:
-        documento = DocxTemplate(
-            "TERMO_RESPONSABILIDADE_MODELO.docx"
-        )
+        documento = DocxTemplate(str(PASTA_PROJETO / "TERMO_RESPONSABILIDADE_MODELO.docx"))
 
         dados = {
             "nome": nome,
@@ -38,7 +38,7 @@ def gerar_termo(
 
         documento.render(dados)
 
-        pasta = "termos_empréstimos"
+        pasta = str(PASTA_PROJETO / "termos_empréstimos")
 
         if not os.path.exists(pasta):
             os.makedirs(pasta)
@@ -107,9 +107,7 @@ def gerar_termo_devolucao(
     chamado_devolucao
 ):
     try:
-        documento = DocxTemplate(
-            "TERMO_DEVOLUCAO_MODELO.docx"
-        )
+        documento = DocxTemplate(str(PASTA_PROJETO / "TERMO_DEVOLUCAO_MODELO.docx"))
 
         dados = {
             "nome": nome,
@@ -134,7 +132,7 @@ def gerar_termo_devolucao(
 
         documento.render(dados)
 
-        pasta = "termos_devolucao"
+        pasta = str(PASTA_PROJETO / "termos_devolucao")
 
         if not os.path.exists(pasta):
             os.makedirs(pasta)
@@ -161,143 +159,20 @@ def gerar_termo_devolucao(
 
 
 def gerar_termo_existente():
-    print("\n===== GERAR TERMO DE RESPONSABILIDADE =====")
-
-    conexao = get_connection()
-
-    if conexao is None:
-        print("Erro ao conectar com o banco.")
-        return
-
-    cursor = conexao.cursor()
+    """Reimprime um termo pelo ID no menu de texto."""
+    from modulos import servicos
 
     try:
-        cursor.execute(
-            """
-            SELECT
-                e.id,
-                c.login,
-                c.nome,
-                a.serial_number,
-                a.tipo,
-                a.marca,
-                a.modelo,
-                e.data_saida
-            FROM emprestimos e
-
-            JOIN colaboradores c
-                ON c.login = e.id_colaborador
-
-            JOIN ativos a
-                ON a.serial_number = e.id_ativo
-
-            ORDER BY e.id DESC
-            """
-        )
-
-        emprestimos = cursor.fetchall()
-
+        emprestimos = servicos.listar_emprestimos(False)
         if not emprestimos:
             print("\nNenhum empréstimo cadastrado.")
             return
-
         print("\n===== EMPRÉSTIMOS CADASTRADOS =====")
-
-        for (
-            emp_id,
-            login,
-            nome,
-            serial,
-            tipo,
-            marca,
-            modelo,
-            data_saida
-        ) in emprestimos:
-
-            print("----------------------------------------")
-            print(f"ID empréstimo: {emp_id}")
-            print(f"Colaborador:   {nome} ({login})")
-            print(f"Ativo:         {tipo} {marca} {modelo}")
-            print(f"Serial:        {serial}")
-            print(f"Data saída:    {data_saida}")
-
-        print("----------------------------------------")
-
-        try:
-            id_emprestimo = int(
-                input("\nID do empréstimo para gerar o termo: ")
-            )
-        except ValueError:
-            print("Informe um ID numérico.")
-            return
-
-        cursor.execute(
-            """
-            SELECT
-                c.login,
-                c.nome,
-                c.CPF,
-                c.departamento,
-                c.cargo,
-                c.campus,
-                a.serial_number,
-                a.tipo,
-                a.marca,
-                a.modelo,
-                a.itens_entregues,
-                a.id_chamado
-            FROM emprestimos e
-
-            JOIN colaboradores c
-                ON c.login = e.id_colaborador
-
-            JOIN ativos a
-                ON a.serial_number = e.id_ativo
-
-            WHERE e.id = %s
-            """,
-            (id_emprestimo,)
-        )
-
-        resultado = cursor.fetchone()
-
-        if resultado is None:
-            print("\nEmpréstimo não encontrado.")
-            return
-
-        (
-            login,
-            nome,
-            cpf,
-            departamento,
-            cargo,
-            campus,
-            serial,
-            tipo,
-            marca,
-            modelo,
-            itens_entregues,
-            id_chamado
-        ) = resultado
-
-        gerar_termo(
-            login=login,
-            nome=nome,
-            cpf=cpf,
-            departamento=departamento,
-            cargo=cargo,
-            campus=campus,
-            serial=serial,
-            tipo=tipo,
-            marca=marca,
-            modelo=modelo,
-            itens_entregues=itens_entregues,
-            id_chamado=id_chamado
-        )
-
+        for emp_id, login, nome, serial, tipo, marca, modelo, saida, _, _ in emprestimos:
+            print(f"{emp_id}: {nome} ({login}), {tipo} {marca} {modelo}, "
+                  f"serial {serial}, saída {saida}")
+        emp_id = input("\nID do empréstimo para gerar o termo: ").strip()
+        caminho = servicos.reimprimir_termo(emp_id)
+        print(f"Termo gerado: {caminho}")
     except Exception as erro:
-        print(f"\nErro ao gerar termo: {erro}")
-
-    finally:
-        cursor.close()
-        conexao.close()
+        print(f"Erro ao gerar termo: {erro}")

@@ -6,149 +6,52 @@ pip install openpyxl
 """
 
 from openpyxl import Workbook
-from conexao_mysql import get_connection
+from pathlib import Path
+from modulos import servicos
 
 
-# =========================================================
-# RELATORIO - TEMPO EM ABERTO
-# =========================================================
+PASTA_PLANILHAS = Path(__file__).resolve().parent.parent / "Planilha de Controle"
 
-def relatorio_tempo_em_aberto():
-    """
-    Lista todos os emprestimos em aberto,
-    do mais antigo para o mais recente.
-    """
 
-    conexao = get_connection()
+def caminho_planilha(nome_arquivo):
+    """Mantém as exportações na pasta de planilhas do projeto."""
+    return PASTA_PLANILHAS / Path(nome_arquivo).name
 
-    if conexao is None:
-        return []
 
-    cursor = conexao.cursor()
-
+def relatorio_tempo_emprestado():
+    """Exibe empréstimos em aberto, do mais antigo para o mais recente."""
     try:
-        cursor.execute(
-            """
-            SELECT
-                e.id,
-                c.nome,
-                a.tipo,
-                a.marca,
-                a.modelo,
-                a.serial_number,
-                e.data_saida,
-                DATEDIFF(CURDATE(), e.data_saida) AS dias_em_aberto,
-                a.id_chamado
-            FROM emprestimos e
-            JOIN colaboradores c
-                ON c.login = e.id_colaborador
-            JOIN ativos a
-                ON a.serial_number = e.id_ativo
-            WHERE e.data_devolucao IS NULL
-            ORDER BY dias_em_aberto DESC
-            """
-        )
-
-        resultados = cursor.fetchall()
-
+        resultados = servicos.consultar_tempo_emprestado()
         if not resultados:
-            print("\nNao ha emprestimos em aberto no momento.")
-
+            print("\nNão há empréstimos em aberto no momento.")
         else:
-            print(
-                "\nEmprestimos em aberto "
-                "(do mais antigo para o mais recente):"
-            )
-
-            for (
-                emp_id,
-                nome,
-                tipo,
-                marca,
-                modelo,
-                serial,
-                data_saida,
-                dias,
-                id_chamado
-            ) in resultados:
-
-                print("----------------------------------------")
-                print(f"ID emprestimo: {emp_id}")
-                print(f"Colaborador:   {nome}")
-                print(f"Ativo:         {tipo} {marca} {modelo}")
-                print(f"Serial:        {serial}")
-                print(f"Data saida:    {data_saida}")
-                print(f"Dias aberto:   {dias}")
-                print(f"Chamado GLPI:  {id_chamado}")
-
+            print("\nEmpréstimos em aberto (do mais antigo para o mais recente):")
+            for emp_id, nome, tipo, marca, modelo, serial, saida, dias, chamado in resultados:
+                print("-" * 40)
+                print(f"ID empréstimo: {emp_id}\nColaborador: {nome}")
+                print(f"Ativo: {tipo} {marca} {modelo}\nSerial: {serial}")
+                print(f"Data saída: {saida}\nDias emprestado: {dias}")
+                print(f"Chamado GLPI: {chamado}")
         return resultados
-
     except Exception as erro:
-        print(f"\nErro ao gerar relatorio: {erro}")
+        print(f"Erro ao gerar relatório: {erro}")
         return []
 
-    finally:
-        cursor.close()
-        conexao.close()
-
-
-# =========================================================
-# RELATORIO - POR DEPARTAMENTO
-# =========================================================
 
 def relatorio_por_departamento():
-    """
-    Conta quantos ativos estao atualmente emprestados,
-    agrupados por departamento.
-    """
-
-    conexao = get_connection()
-
-    if conexao is None:
-        return []
-
-    cursor = conexao.cursor()
-
+    """Exibe a quantidade de ativos emprestados por departamento."""
     try:
-        cursor.execute(
-            """
-            SELECT
-                c.departamento,
-                COUNT(*) AS total_emprestados
-
-            FROM emprestimos e
-
-            JOIN colaboradores c
-                ON c.login = e.id_colaborador
-
-            WHERE e.data_devolucao IS NULL
-
-            GROUP BY c.departamento
-
-            ORDER BY total_emprestados DESC
-            """
-        )
-
-        resultados = cursor.fetchall()
-
+        resultados = servicos.consultar_por_departamento()
         if not resultados:
-            print("\nNao ha emprestimos em aberto no momento.")
-
+            print("\nNão há empréstimos em aberto no momento.")
         else:
             print("\nAtivos emprestados por departamento:")
-
             for departamento, total in resultados:
                 print(f"{departamento}: {total}")
-
         return resultados
-
     except Exception as erro:
-        print(f"\nErro ao gerar relatorio: {erro}")
+        print(f"Erro ao gerar relatório: {erro}")
         return []
-
-    finally:
-        cursor.close()
-        conexao.close()
 
 
 # =========================================================
@@ -198,12 +101,15 @@ def exportar_para_excel(dados, cabecalho, nome_arquivo):
                 maior_tamanho + 2
             )
 
-        planilha.save(nome_arquivo)
+        PASTA_PLANILHAS.mkdir(parents=True, exist_ok=True)
+        destino = caminho_planilha(nome_arquivo)
+        planilha.save(destino)
 
         print(
             f"\nRelatorio exportado com sucesso:"
-            f"\n{nome_arquivo}"
+            f"\n{destino}"
         )
+        return str(destino)
 
     except Exception as erro:
         print(f"\nErro ao exportar Excel: {erro}")
@@ -233,7 +139,7 @@ def menu_relatorios():
 
         if opcao == "1":
 
-            dados = relatorio_tempo_em_aberto()
+            dados = relatorio_tempo_emprestado()
 
             if dados:
 
@@ -251,7 +157,7 @@ def menu_relatorios():
                         "Modelo",
                         "Serial",
                         "Data saida",
-                        "Dias em aberto",
+                        "Dias emprestado",
                         "Chamado GLPI"
                     ]
 
