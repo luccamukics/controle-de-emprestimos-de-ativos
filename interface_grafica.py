@@ -15,6 +15,7 @@ COLUNAS_ATIVOS = (
     ("patrimonio", "Patrimônio", 115), ("tipo", "Tipo", 105),
     ("marca", "Marca", 105), ("modelo", "Modelo", 150),
     ("status", "Status", 100), ("colaborador", "Colaborador", 190),
+    ("setor", "Setor", 165),
     ("itens", "Itens entregues", 195),
     ("chamado", "Chamado", 95),
 )
@@ -231,7 +232,7 @@ class Aplicacao(tk.Tk):
         if registro is None:
             return
         (empresa_atual, serial_atual, patrimonio_atual, tipo_atual, marca_atual,
-         modelo_atual, status_atual, _colaborador_atual, itens_atuais,
+         modelo_atual, status_atual, _colaborador_atual, _setor_atual, itens_atuais,
          chamado_atual) = registro
         janela = Formulario(self, "Editar ativo")
         empresa = janela.campo("Empresa *", empresa_atual, combo=("Arklok", "Vivo"))

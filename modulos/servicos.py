@@ -59,11 +59,12 @@ def listar_ativos(disponiveis=False):
 
 
 def listar_ativos_com_colaborador(disponiveis=False):
-    """Inclui o responsável pelo empréstimo aberto mais recente de cada ativo."""
+    """Inclui nome e setor do empréstimo aberto mais recente de cada ativo."""
     filtro = "WHERE a.at_status = 'disponivel'" if disponiveis else ""
     return _consultar(
         f"""SELECT a.empresa, a.serial_number, a.patrimonio, a.tipo, a.marca,
-                   a.modelo, a.at_status, c.nome, a.itens_entregues, a.id_chamado
+                   a.modelo, a.at_status, c.nome, c.departamento,
+                   a.itens_entregues, a.id_chamado
             FROM ativos a
             LEFT JOIN emprestimos e ON e.id = (
                 SELECT e2.id FROM emprestimos e2
