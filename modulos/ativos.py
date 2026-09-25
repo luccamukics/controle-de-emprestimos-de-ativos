@@ -10,13 +10,20 @@ def cadastrar_ativo():
     serial = input("Serial number: ").strip()
     patrimonio = input("Patrimônio (opcional): ").strip() if empresa == "Arklok" else None
     tipo = input("Tipo (notebook/celular): ").strip()
+    if tipo.upper() == "CELULAR":
+        imei_1 = input("IMEI 1 (opcional): ").strip()
+        imei_2 = input("IMEI 2 (opcional): ").strip()
+        numero_celular = input("Número de celular (opcional): ").strip()
+    else:
+        imei_1 = imei_2 = numero_celular = None
     marca = input("Marca: ").strip()
     modelo = input("Modelo: ").strip()
     itens = input("Itens entregues (carregador, mouse, etc.): ").strip()
     chamado = input("ID do chamado GLPI: ").strip()
     try:
         novo_serial = servicos.cadastrar_ativo(
-            serial, tipo, marca, modelo, itens, chamado, empresa, patrimonio
+            serial, tipo, marca, modelo, itens, chamado, empresa, patrimonio,
+            imei_1, imei_2, numero_celular
         )
         print(f"\nAtivo cadastrado com sucesso! Serial: {novo_serial}")
     except Exception as erro:

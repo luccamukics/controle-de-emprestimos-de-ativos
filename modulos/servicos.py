@@ -79,6 +79,33 @@ def listar_ativos_com_colaborador(disponiveis=False):
     )
 
 
+def buscar_dados_celular(serial):
+    """Busca detalhes do celular sem alterar a lista e a planilha de ativos."""
+    linhas = _consultar(
+        "SELECT imei_1, imei_2, numero_celular FROM ativos WHERE serial_number = %s",
+        (serial,),
+    )
+    if not linhas:
+        raise ErroOperacao("Ativo não encontrado. Atualize a lista.")
+    return tuple(valor or "" for valor in linhas[0])
+
+
+def _dados_celular(tipo, imei_1, imei_2, numero_celular):
+    if tipo != "CELULAR":
+        return None, None, None
+    dados = []
+    for nome, valor in (("IMEI 1", imei_1), ("IMEI 2", imei_2)):
+        valor = _texto(valor, nome, 15, False)
+        if valor and (len(valor) != 15 or not valor.isascii() or not valor.isdecimal()):
+            raise ErroOperacao(f"{nome} deve ter exatamente 15 dígitos.")
+        dados.append(valor or None)
+    numero = _texto(numero_celular, "o número de celular", 20, False)
+    if numero and (not 8 <= sum(c.isdigit() for c in numero) <= 15 or
+                   any(c not in "+ ()-0123456789" for c in numero)):
+        raise ErroOperacao("Número de celular inválido. Use de 8 a 15 dígitos.")
+    return *dados, numero or None
+
+
 def _empresa_patrimonio(empresa, patrimonio):
     if empresa not in ("Arklok", "Vivo"):
         raise ErroOperacao("Selecione Arklok ou Vivo no campo Empresa.")
@@ -136,10 +163,14 @@ def consultar_por_departamento():
 
 
 def cadastrar_ativo(serial, tipo, marca, modelo, itens_entregues, id_chamado,
-                   empresa, patrimonio=None):
+                   empresa, patrimonio=None, imei_1=None, imei_2=None,
+                   numero_celular=None):
     patrimonio = _empresa_patrimonio(empresa, patrimonio)
     serial = _texto(maiusculas(serial), "o serial", 15)
     tipo = _texto(maiusculas(tipo), "o tipo", 20)
+    imei_1, imei_2, numero_celular = _dados_celular(
+        tipo, imei_1, imei_2, numero_celular
+    )
     marca = _texto(maiusculas(marca), "a marca", 30)
     modelo = _texto(maiusculas(modelo), "o modelo", 30)
     itens_entregues = _texto(maiusculas(itens_entregues), "os itens entregues", 30, False)
@@ -153,10 +184,12 @@ def cadastrar_ativo(serial, tipo, marca, modelo, itens_entregues, id_chamado,
                 raise ErroOperacao("Já existe um ativo com esse serial.")
             cursor.execute(
                 """INSERT INTO ativos (empresa, serial_number, patrimonio, tipo,
-                       modelo, marca, at_status, itens_entregues, id_chamado)
-                   VALUES (%s, %s, %s, %s, %s, %s, 'disponivel', %s, %s)""",
+                       modelo, marca, at_status, itens_entregues, id_chamado,
+                       imei_1, imei_2, numero_celular)
+                   VALUES (%s, %s, %s, %s, %s, %s, 'disponivel', %s, %s,
+                           %s, %s, %s)""",
                 (empresa, serial, patrimonio, tipo, modelo, marca,
-                 itens_entregues, id_chamado),
+                 itens_entregues, id_chamado, imei_1, imei_2, numero_celular),
             )
             conexao.commit()
             return serial
@@ -170,11 +203,15 @@ def cadastrar_ativo(serial, tipo, marca, modelo, itens_entregues, id_chamado,
 
 
 def editar_ativo(serial_original, empresa, serial, patrimonio, tipo, marca,
-                modelo, status, itens_entregues, id_chamado):
+                modelo, status, itens_entregues, id_chamado, imei_1=None,
+                imei_2=None, numero_celular=None):
     serial_original = _texto(serial_original, "o serial original", 15)
     patrimonio = _empresa_patrimonio(empresa, patrimonio)
     serial = _texto(maiusculas(serial), "o serial", 15)
     tipo = _texto(maiusculas(tipo), "o tipo", 20)
+    imei_1, imei_2, numero_celular = _dados_celular(
+        tipo, imei_1, imei_2, numero_celular
+    )
     marca = _texto(maiusculas(marca), "a marca", 30)
     modelo = _texto(maiusculas(modelo), "o modelo", 30)
     itens_entregues = _texto(maiusculas(itens_entregues), "os itens entregues", 30, False)
@@ -210,12 +247,13 @@ def editar_ativo(serial_original, empresa, serial, patrimonio, tipo, marca,
                 if cursor.fetchone():
                     raise ErroOperacao("Já existe um ativo com esse patrimônio.")
             dados = (empresa, patrimonio, tipo, marca, modelo, status,
-                     itens_entregues, id_chamado)
+                     itens_entregues, id_chamado, imei_1, imei_2, numero_celular)
             if serial == serial_original:
                 cursor.execute(
                     """UPDATE ativos SET empresa = %s, patrimonio = %s, tipo = %s,
                               marca = %s, modelo = %s, at_status = %s,
-                              itens_entregues = %s, id_chamado = %s
+                              itens_entregues = %s, id_chamado = %s,
+                              imei_1 = %s, imei_2 = %s, numero_celular = %s
                        WHERE serial_number = %s""", (*dados, serial_original),
                 )
             else:
@@ -249,8 +287,9 @@ def editar_ativo(serial_original, empresa, serial, patrimonio, tipo, marca,
                     )
                 cursor.execute(
                     """INSERT INTO ativos (serial_number, empresa, patrimonio,
-                              tipo, marca, modelo, at_status, itens_entregues, id_chamado)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                              tipo, marca, modelo, at_status, itens_entregues, id_chamado,
+                              imei_1, imei_2, numero_celular)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                     (serial_intermediario, *dados),
                 )
                 cursor.execute("UPDATE emprestimos SET id_ativo = %s WHERE id_ativo = %s",
@@ -265,8 +304,9 @@ def editar_ativo(serial_original, empresa, serial, patrimonio, tipo, marca,
                         )
                     cursor.execute(
                         """INSERT INTO ativos (serial_number, empresa, patrimonio,
-                                  tipo, marca, modelo, at_status, itens_entregues, id_chamado)
-                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                                  tipo, marca, modelo, at_status, itens_entregues, id_chamado,
+                                  imei_1, imei_2, numero_celular)
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                         (serial, *dados),
                     )
                     cursor.execute(

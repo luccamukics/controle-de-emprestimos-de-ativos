@@ -51,11 +51,11 @@ def preencher(arvore, linhas):
 
 
 class Formulario(tk.Toplevel):
-    def __init__(self, app, titulo, largura=570):
+    def __init__(self, app, titulo, largura=570, altura=560):
         super().__init__(app)
         self.app = app
         self.title(titulo)
-        self.geometry(f"{largura}x560")
+        self.geometry(f"{largura}x{altura}")
         self.resizable(True, True)
         self.transient(app)
         self.grab_set()
@@ -63,13 +63,15 @@ class Formulario(tk.Toplevel):
         self.corpo.pack(fill="both", expand=True)
         self.corpo.columnconfigure(1, weight=1)
         self.campos = {}
+        self.rotulos = {}
         ttk.Label(self.corpo, text=titulo, style="Titulo.TLabel").grid(
             row=0, column=0, columnspan=3, sticky="w", pady=(0, 18)
         )
         self.linha = 1
 
     def campo(self, rotulo, valor="", combo=None, formatar=None):
-        ttk.Label(self.corpo, text=rotulo).grid(
+        etiqueta = ttk.Label(self.corpo, text=rotulo)
+        etiqueta.grid(
             row=self.linha, column=0, sticky="w", padx=(0, 10), pady=6
         )
         inicial = "" if valor is None else str(valor)
@@ -88,6 +90,7 @@ class Formulario(tk.Toplevel):
                     widget.icursor(min(posicao, len(formatado)))
             variavel.trace_add("write", atualizar)
         self.campos[rotulo] = widget
+        self.rotulos[rotulo] = etiqueta
         self.linha += 1
         return variavel
 
@@ -197,12 +200,16 @@ class Aplicacao(tk.Tk):
         self.executar(salvar)
 
     def novo_ativo(self):
-        janela = Formulario(self, "Cadastrar ativo")
+        janela = Formulario(self, "Cadastrar ativo", altura=680)
         empresa = janela.campo("Empresa *", combo=("Arklok", "Vivo"))
         serial = janela.campo("Serial number *", formatar=maiusculas)
         patrimonio = janela.campo("Patrimônio", formatar=maiusculas)
         self.condicionar_patrimonio(janela, empresa, patrimonio)
         tipo = janela.campo("Tipo *", combo=("NOTEBOOK", "CELULAR"))
+        imei_1 = janela.campo("IMEI 1")
+        imei_2 = janela.campo("IMEI 2")
+        numero_celular = janela.campo("Número de celular")
+        self.condicionar_celular(janela, tipo)
         marca = janela.campo("Marca *", formatar=maiusculas)
         modelo = janela.campo("Modelo *", formatar=maiusculas)
         itens = janela.campo("Itens entregues", formatar=maiusculas)
@@ -212,7 +219,8 @@ class Aplicacao(tk.Tk):
             def acao():
                 novo_serial = servicos.cadastrar_ativo(
                     serial.get(), tipo.get(), marca.get(), modelo.get(),
-                    itens.get(), chamado.get(), empresa.get(), patrimonio.get()
+                    itens.get(), chamado.get(), empresa.get(), patrimonio.get(),
+                    imei_1.get(), imei_2.get(), numero_celular.get()
                 )
                 janela.destroy()
                 self.atualizar_ativos()
@@ -231,6 +239,19 @@ class Aplicacao(tk.Tk):
         empresa.trace_add("write", atualizar)
         atualizar()
 
+    @staticmethod
+    def condicionar_celular(janela, tipo):
+        def atualizar(*_args):
+            for rotulo in ("IMEI 1", "IMEI 2", "Número de celular"):
+                if tipo.get().upper() == "CELULAR":
+                    janela.rotulos[rotulo].grid()
+                    janela.campos[rotulo].grid()
+                else:
+                    janela.rotulos[rotulo].grid_remove()
+                    janela.campos[rotulo].grid_remove()
+        tipo.trace_add("write", atualizar)
+        atualizar()
+
     def ativo_selecionado(self):
         selecao = self.arvore_ativos.selection()
         if not selecao:
@@ -246,13 +267,20 @@ class Aplicacao(tk.Tk):
         (empresa_atual, serial_atual, patrimonio_atual, tipo_atual, marca_atual,
          modelo_atual, status_atual, _colaborador_atual, _setor_atual, itens_atuais,
          chamado_atual) = registro
-        janela = Formulario(self, "Editar ativo")
+        dados_celular = self.executar(lambda: servicos.buscar_dados_celular(serial_atual))
+        if dados_celular is None:
+            return
+        janela = Formulario(self, "Editar ativo", altura=720)
         empresa = janela.campo("Empresa *", empresa_atual, combo=("Arklok", "Vivo"))
         serial = janela.campo("Serial number *", serial_atual, formatar=maiusculas)
         patrimonio = janela.campo("Patrimônio", patrimonio_atual, formatar=maiusculas)
         self.condicionar_patrimonio(janela, empresa, patrimonio)
         tipo = janela.campo("Tipo *", tipo_atual,
                             combo=("NOTEBOOK", "CELULAR"), formatar=maiusculas)
+        imei_1 = janela.campo("IMEI 1", dados_celular[0])
+        imei_2 = janela.campo("IMEI 2", dados_celular[1])
+        numero_celular = janela.campo("Número de celular", dados_celular[2])
+        self.condicionar_celular(janela, tipo)
         marca = janela.campo("Marca *", marca_atual, formatar=maiusculas)
         modelo = janela.campo("Modelo *", modelo_atual, formatar=maiusculas)
         status = janela.campo("Status *", status_atual,
@@ -265,7 +293,8 @@ class Aplicacao(tk.Tk):
                 novo_serial = servicos.editar_ativo(
                     serial_atual, empresa.get(), serial.get(), patrimonio.get(),
                     tipo.get(), marca.get(), modelo.get(), status.get(),
-                    itens.get(), chamado.get()
+                    itens.get(), chamado.get(), imei_1.get(), imei_2.get(),
+                    numero_celular.get()
                 )
                 janela.destroy()
                 self.atualizar_tudo()

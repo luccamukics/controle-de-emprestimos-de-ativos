@@ -11,6 +11,7 @@ $destino = Join-Path $PSScriptRoot "dist\ControleEmprestimos"
 Copy-Item "TERMO_RESPONSABILIDADE_MODELO.docx" $destino -Force
 Copy-Item "TERMO_DEVOLUCAO_MODELO.docx" $destino -Force
 Copy-Item ".env.exemplo" $destino -Force
+Copy-Item "migracao_dados_celular.sql" $destino -Force
 
 if (Test-Path (Join-Path $destino ".env")) {
     throw "Por seguranca, o pacote nao pode conter um .env com credenciais."

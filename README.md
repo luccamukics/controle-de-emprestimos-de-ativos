@@ -9,6 +9,7 @@ O projeto surgiu da necessidade de centralizar o controle de equipamentos e loca
 - Cadastro, consulta, edição e exclusão de ativos.
 - Serial, patrimônio, tipo, marca, modelo e itens entregues são exibidos e salvos em maiúsculas; nome, departamento e cargo de novos colaboradores são salvos com as iniciais maiúsculas. As mesmas regras valem na interface e no menu de texto.
 - Seleção da empresa responsável (`Arklok` ou `Vivo`). O patrimônio pode ser informado apenas para ativos da Arklok; esses campos servem ao controle interno e não aparecem nos termos.
+- Ao escolher `CELULAR`, o cadastro e a edição exibem IMEI 1, IMEI 2 e Número de celular. Esses dados são opcionais e ficam no cadastro do ativo; os termos permanecem iguais. Os IMEIs informados devem ter 15 dígitos, e o número aceita de 8 a 15 dígitos, com espaços e pontuação usuais. Alterar o tipo para `NOTEBOOK` limpa esses dados ao salvar.
 - Cadastro de colaboradores durante o registro de um empréstimo, com reaproveitamento dos dados existentes.
 - Registro de empréstimos e devoluções, com atualização do status do ativo e geração de termos DOCX.
 - Reemissão de termos de responsabilidade, consulta de empréstimos em aberto e exportação de relatórios por empréstimo ou departamento.
@@ -45,6 +46,8 @@ Se o banco ainda não tiver as colunas `empresa` e `patrimonio` na tabela `ativo
 
 A tabela `emprestimos` também precisa conter a coluna `chamado_devolucao`, utilizada pelo registro de devoluções.
 
+**Para usar os campos de celular**, faça backup do banco e execute `migracao_dados_celular.sql` **uma única vez** no schema `controle_emprestimos`, antes de abrir o programa atualizado (inclusive o `.exe`). O script acrescenta três colunas opcionais à tabela `ativos` e conserva os ativos existentes. Se as colunas já existirem, não execute novamente. É possível conferir com `SHOW COLUMNS FROM ativos;` no MySQL Workbench.
+
 ## Execução
 
 Abra a interface gráfica com:
@@ -63,7 +66,7 @@ python main.py --cli
 
 O executável abre a mesma interface gráfica sem precisar iniciar pelo PyCharm ou instalar Python no computador onde será usado. Baixe **ControleEmprestimos-Windows** na seção *Artifacts* da [execução mais recente de Aplicativo Windows](https://github.com/luccamukics/controle-de-emprestimos-de-ativos/actions/workflows/build-windows.yml) e extraia **a pasta inteira** em um local onde você possa salvar arquivos, como Documentos. Abra `ControleEmprestimos.exe` dentro dela.
 
-Na primeira execução, copie `.env.exemplo` para `.env` na mesma pasta do executável e preencha as credenciais do MySQL. O banco deve estar acessível desse computador; `DB_HOST=localhost` funciona apenas se o MySQL estiver nele. Os dois modelos DOCX precisam permanecer ao lado do `.exe`. Termos e planilhas serão criados nessa mesma pasta, em `termos_empréstimos/`, `termos_devolucao/` e `Planilha de Controle/`. O pacote publicado não inclui senha, dados do banco ou documentos gerados.
+Na primeira execução, copie `.env.exemplo` para `.env` na mesma pasta do executável e preencha as credenciais do MySQL. O banco deve estar acessível desse computador; `DB_HOST=localhost` funciona apenas se o MySQL estiver nele. Os dois modelos DOCX precisam permanecer ao lado do `.exe`. O pacote inclui `migracao_dados_celular.sql` para atualizar o banco antes do uso. Termos e planilhas serão criados nessa mesma pasta, em `termos_empréstimos/`, `termos_devolucao/` e `Planilha de Controle/`. O pacote publicado não inclui senha, dados do banco ou documentos gerados.
 
 Para gerar o pacote no seu próprio Windows, execute `powershell -ExecutionPolicy Bypass -File .\build_windows.ps1` na raiz do repositório, com Python instalado. O resultado estará em `dist\ControleEmprestimos\`. Distribua essa pasta inteira; o `.exe` sozinho depende dos arquivos que a acompanham.
 
@@ -87,6 +90,7 @@ Na aba **Relatórios**, consulte os empréstimos em aberto e os ativos emprestad
 | `modulos/termos.py` | Geração dos documentos a partir dos modelos Word. |
 | `modulos/relatorios.py` | Consultas e exportação das planilhas. |
 | `migracao_empresa_patrimonio.sql` | Atualização de bancos anteriores. |
+| `migracao_dados_celular.sql` | Adiciona IMEI 1, IMEI 2 e Número de celular aos ativos. |
 | `termos_empréstimos/` | Termos de responsabilidade gerados. |
 | `termos_devolucao/` | Termos de devolução gerados. |
 | `Planilha de Controle/` | Relatórios Excel exportados. |
@@ -95,7 +99,7 @@ As pastas de saída são criadas conforme os documentos e relatórios são gerad
 
 ## Dados usados
 
-- **Ativos:** empresa, número de série (chave primária), patrimônio, tipo, marca, modelo, status, itens entregues e chamado.
+- **Ativos:** empresa, número de série (chave primária), patrimônio, tipo, marca, modelo, status, itens entregues, chamado e, para celulares, IMEI 1, IMEI 2 e número de celular.
 - **Colaboradores:** login (chave primária), nome, CPF, departamento, cargo e campus.
 - **Empréstimos:** identificador, colaborador, ativo, datas de saída e devolução, condições, observações e chamado de devolução.
 

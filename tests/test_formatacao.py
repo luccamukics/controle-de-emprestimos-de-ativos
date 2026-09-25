@@ -57,7 +57,8 @@ class TestFormatacao(unittest.TestCase):
                 serial_number TEXT PRIMARY KEY COLLATE NOCASE,
                 empresa TEXT, patrimonio TEXT UNIQUE COLLATE NOCASE,
                 tipo TEXT, marca TEXT, modelo TEXT, at_status TEXT,
-                itens_entregues TEXT, id_chamado INTEGER
+                itens_entregues TEXT, id_chamado INTEGER,
+                imei_1 TEXT, imei_2 TEXT, numero_celular TEXT
             );
             CREATE TABLE colaboradores (
                 login TEXT PRIMARY KEY, nome TEXT, CPF TEXT,
@@ -120,7 +121,8 @@ class TestFormatacao(unittest.TestCase):
 
     def test_edita_serial_antigo_preservando_historico(self):
         self.banco.execute(
-            """INSERT INTO ativos VALUES
+            """INSERT INTO ativos (serial_number, empresa, patrimonio, tipo,
+                 marca, modelo, at_status, itens_entregues, id_chamado) VALUES
                ('abc001', 'Arklok', 'pat1', 'notebook', 'dell',
                 'latitude', 'emprestado', 'fonte', 10)"""
         )
@@ -149,6 +151,33 @@ class TestFormatacao(unittest.TestCase):
             self.banco.execute("SELECT id_ativo FROM emprestimos").fetchone(),
             ("ABC001",),
         )
+
+    def test_celular_salva_edita_e_limpa_dados_ao_mudar_tipo(self):
+        serial = servicos.cadastrar_ativo(
+            "cel-01", "celular", "samsung", "a55", "carregador", 123,
+            "Vivo", None, "123456789012345", "987654321098765", "(11) 99999-1234"
+        )
+        self.assertEqual(
+            servicos.buscar_dados_celular(serial),
+            ("123456789012345", "987654321098765", "(11) 99999-1234"),
+        )
+        servicos.editar_ativo(
+            serial, "Vivo", "cel-02", None, "celular", "samsung", "a55",
+            "disponivel", "carregador", 123, "123456789012345", "", "11999991234"
+        )
+        self.assertEqual(servicos.buscar_dados_celular("CEL-02"),
+                         ("123456789012345", "", "11999991234"))
+        servicos.editar_ativo(
+            "CEL-02", "Vivo", "CEL-02", None, "notebook", "dell", "latitude",
+            "disponivel", "fonte", 123, "123456789012345", "", "11999991234"
+        )
+        self.assertEqual(servicos.buscar_dados_celular("CEL-02"), ("", "", ""))
+
+    def test_imei_invalido_nao_cadastra(self):
+        with self.assertRaisesRegex(servicos.ErroOperacao, "15 dígitos"):
+            servicos.cadastrar_ativo("CEL-01", "CELULAR", "SAMSUNG", "A55",
+                                    "FONTE", 123, "Vivo", None, "123", "", "")
+        self.assertEqual(self.banco.execute("SELECT COUNT(*) FROM ativos").fetchone()[0], 0)
 
 
 if __name__ == "__main__":
