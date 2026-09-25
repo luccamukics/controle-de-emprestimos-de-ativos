@@ -58,7 +58,7 @@ Para usar o menu de texto:
 python main.py --cli
 ```
 
-Na aba **Ativos**, selecione um equipamento para editá-lo ou excluí-lo. A edição permite alterar todos os dados, inclusive o número de série; empréstimos anteriores passam a referenciar o novo serial. Um ativo com empréstimo em aberto só pode ser excluído depois da devolução. Se houver empréstimos já encerrados, a confirmação de exclusão informa quantos registros históricos também serão apagados do banco. Os termos DOCX gerados anteriormente permanecem nas pastas.
+Na aba **Ativos**, a coluna Colaborador mostra quem está com cada ativo emprestado; ativos sem empréstimo em aberto ficam com a célula vazia. O botão **Exportar Excel** salva a lista exibida (inclusive o filtro «Somente disponíveis») em `Planilha de Controle/relatorio_ativos.xlsx`. Selecione um equipamento para editá-lo ou excluí-lo. A edição permite alterar todos os dados, inclusive o número de série; empréstimos anteriores passam a referenciar o novo serial. Um ativo com empréstimo em aberto só pode ser excluído depois da devolução. Se houver empréstimos já encerrados, a confirmação de exclusão informa quantos registros históricos também serão apagados do banco. Os termos DOCX gerados anteriormente permanecem nas pastas.
 
 Na aba **Empréstimos**, registre empréstimos ou devoluções e consulte as operações em aberto. A criação de um termo ocorre depois da gravação no banco: se o documento falhar, confira o aviso na interface e o modelo DOCX antes de tentar gerar o termo novamente.
 

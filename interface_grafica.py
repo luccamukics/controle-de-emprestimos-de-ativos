@@ -14,7 +14,8 @@ COLUNAS_ATIVOS = (
     ("empresa", "Empresa", 95), ("serial", "Serial", 135),
     ("patrimonio", "Patrimônio", 115), ("tipo", "Tipo", 105),
     ("marca", "Marca", 105), ("modelo", "Modelo", 150),
-    ("status", "Status", 100), ("itens", "Itens entregues", 195),
+    ("status", "Status", 100), ("colaborador", "Colaborador", 190),
+    ("itens", "Itens entregues", 195),
     ("chamado", "Chamado", 95),
 )
 
@@ -140,18 +141,48 @@ class Aplicacao(tk.Tk):
         ttk.Button(barra, text="Atualizar", command=self.atualizar_ativos).pack(
             side="left", padx=8
         )
+        ttk.Button(barra, text="Exportar Excel", command=self.exportar_ativos).pack(
+            side="left"
+        )
         self.somente_disponiveis = tk.BooleanVar(value=False)
         ttk.Checkbutton(barra, text="Somente disponíveis",
                         variable=self.somente_disponiveis,
                         command=self.atualizar_ativos).pack(side="right")
         self.arvore_ativos = tabela(self.aba_ativos, COLUNAS_ATIVOS)
+        self.dados_ativos = []
 
     def atualizar_ativos(self):
         def buscar():
-            linhas = servicos.listar_ativos(self.somente_disponiveis.get())
+            linhas = servicos.listar_ativos_com_colaborador(
+                self.somente_disponiveis.get()
+            )
             preencher(self.arvore_ativos, linhas)
+            self.dados_ativos = linhas
             self.status.set(f"{len(linhas)} ativo(s) exibido(s).")
         self.executar(buscar)
+
+    def exportar_ativos(self):
+        if not self.dados_ativos:
+            messagebox.showinfo("Sem ativos", "Não há ativos na tabela para exportar.",
+                                parent=self)
+            return
+        nome = "relatorio_ativos.xlsx"
+        destino = caminho_planilha(nome)
+        if destino.exists() and not messagebox.askyesno(
+            "Substituir planilha", f"O arquivo {destino.name} já existe. Substituir?",
+            parent=self,
+        ):
+            return
+
+        def salvar():
+            resultado = exportar_para_excel(
+                self.dados_ativos, [titulo for _, titulo, _ in COLUNAS_ATIVOS], nome
+            )
+            if resultado is None:
+                raise servicos.ErroOperacao("Não foi possível salvar a planilha.")
+            self.status.set(f"Planilha salva: {resultado}")
+            messagebox.showinfo("Exportação concluída", resultado, parent=self)
+        self.executar(salvar)
 
     def novo_ativo(self):
         janela = Formulario(self, "Cadastrar ativo")
@@ -200,7 +231,8 @@ class Aplicacao(tk.Tk):
         if registro is None:
             return
         (empresa_atual, serial_atual, patrimonio_atual, tipo_atual, marca_atual,
-         modelo_atual, status_atual, itens_atuais, chamado_atual) = registro
+         modelo_atual, status_atual, _colaborador_atual, itens_atuais,
+         chamado_atual) = registro
         janela = Formulario(self, "Editar ativo")
         empresa = janela.campo("Empresa *", empresa_atual, combo=("Arklok", "Vivo"))
         serial = janela.campo("Serial number *", serial_atual)
