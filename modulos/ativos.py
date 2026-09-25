@@ -15,9 +15,10 @@ def cadastrar_ativo():
     itens = input("Itens entregues (carregador, mouse, etc.): ").strip()
     chamado = input("ID do chamado GLPI: ").strip()
     try:
-        servicos.cadastrar_ativo(serial, tipo, marca, modelo, itens, chamado,
-                                 empresa, patrimonio)
-        print(f"\nAtivo cadastrado com sucesso! Serial: {serial}")
+        novo_serial = servicos.cadastrar_ativo(
+            serial, tipo, marca, modelo, itens, chamado, empresa, patrimonio
+        )
+        print(f"\nAtivo cadastrado com sucesso! Serial: {novo_serial}")
     except Exception as erro:
         print(f"Erro ao cadastrar ativo: {erro}")
 

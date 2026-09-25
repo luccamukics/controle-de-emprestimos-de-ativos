@@ -7,6 +7,7 @@ O projeto surgiu da necessidade de centralizar o controle de equipamentos e loca
 ## Funcionalidades
 
 - Cadastro, consulta, edição e exclusão de ativos.
+- Serial, patrimônio, tipo, marca, modelo e itens entregues são exibidos e salvos em maiúsculas; nome, departamento e cargo de novos colaboradores são salvos com as iniciais maiúsculas. As mesmas regras valem na interface e no menu de texto.
 - Seleção da empresa responsável (`Arklok` ou `Vivo`). O patrimônio pode ser informado apenas para ativos da Arklok; esses campos servem ao controle interno e não aparecem nos termos.
 - Cadastro de colaboradores durante o registro de um empréstimo, com reaproveitamento dos dados existentes.
 - Registro de empréstimos e devoluções, com atualização do status do ativo e geração de termos DOCX.
@@ -67,6 +68,8 @@ Na primeira execução, copie `.env.exemplo` para `.env` na mesma pasta do execu
 Para gerar o pacote no seu próprio Windows, execute `powershell -ExecutionPolicy Bypass -File .\build_windows.ps1` na raiz do repositório, com Python instalado. O resultado estará em `dist\ControleEmprestimos\`. Distribua essa pasta inteira; o `.exe` sozinho depende dos arquivos que a acompanham.
 
 Na aba **Ativos**, as colunas Colaborador e Setor mostram quem está com cada ativo emprestado e seu departamento cadastrado; ativos sem empréstimo em aberto ficam com essas células vazias. O botão **Exportar Excel** salva a lista exibida (inclusive o filtro «Somente disponíveis») em `Planilha de Controle/relatorio_ativos.xlsx`. Selecione um equipamento para editá-lo ou excluí-lo. A edição permite alterar todos os dados, inclusive o número de série; empréstimos anteriores passam a referenciar o novo serial. Um ativo com empréstimo em aberto só pode ser excluído depois da devolução. Se houver empréstimos já encerrados, a confirmação de exclusão informa quantos registros históricos também serão apagados do banco. Os termos DOCX gerados anteriormente permanecem nas pastas.
+
+A escrita automática é aplicada aos novos cadastros e aos ativos editados. Registros antigos não são alterados em massa: ao editar um ativo com serial em minúsculas, seus empréstimos continuam vinculados depois da atualização. As opções de Empresa e Status mantêm os valores internos necessários ao funcionamento do programa; o chamado GLPI continua numérico. Os novos termos usam os dados salvos com a formatação aplicada; documentos já gerados não são reescritos.
 
 Na aba **Empréstimos**, registre empréstimos ou devoluções e consulte as operações em aberto. A criação de um termo ocorre depois da gravação no banco: se o documento falhar, confira o aviso na interface e o modelo DOCX antes de tentar gerar o termo novamente.
 

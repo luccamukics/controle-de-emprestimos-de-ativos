@@ -1,8 +1,10 @@
 """Operações do sistema usadas pela interface e pelo menu de texto."""
 
 from datetime import date
+from uuid import uuid4
 
 from conexao_mysql import get_connection
+from modulos.formatacao import iniciais_maiusculas, iniciais_maiusculas_funcao, maiusculas
 from modulos.termos import gerar_termo, gerar_termo_devolucao
 
 
@@ -80,7 +82,7 @@ def listar_ativos_com_colaborador(disponiveis=False):
 def _empresa_patrimonio(empresa, patrimonio):
     if empresa not in ("Arklok", "Vivo"):
         raise ErroOperacao("Selecione Arklok ou Vivo no campo Empresa.")
-    patrimonio = _texto(patrimonio, "o patrimônio", 20, False) or None
+    patrimonio = _texto(maiusculas(patrimonio), "o patrimônio", 20, False) or None
     if empresa == "Vivo" and patrimonio:
         raise ErroOperacao("Patrimônio só pode ser preenchido para ativos da Arklok.")
     return patrimonio
@@ -136,11 +138,11 @@ def consultar_por_departamento():
 def cadastrar_ativo(serial, tipo, marca, modelo, itens_entregues, id_chamado,
                    empresa, patrimonio=None):
     patrimonio = _empresa_patrimonio(empresa, patrimonio)
-    serial = _texto(serial, "o serial", 15)
-    tipo = _texto(tipo, "o tipo", 20)
-    marca = _texto(marca, "a marca", 30)
-    modelo = _texto(modelo, "o modelo", 30)
-    itens_entregues = _texto(itens_entregues, "os itens entregues", 30, False)
+    serial = _texto(maiusculas(serial), "o serial", 15)
+    tipo = _texto(maiusculas(tipo), "o tipo", 20)
+    marca = _texto(maiusculas(marca), "a marca", 30)
+    modelo = _texto(maiusculas(modelo), "o modelo", 30)
+    itens_entregues = _texto(maiusculas(itens_entregues), "os itens entregues", 30, False)
     id_chamado = _numero_positivo(id_chamado, "O chamado GLPI")
     conexao = _conexao()
     try:
@@ -171,11 +173,11 @@ def editar_ativo(serial_original, empresa, serial, patrimonio, tipo, marca,
                 modelo, status, itens_entregues, id_chamado):
     serial_original = _texto(serial_original, "o serial original", 15)
     patrimonio = _empresa_patrimonio(empresa, patrimonio)
-    serial = _texto(serial, "o serial", 15)
-    tipo = _texto(tipo, "o tipo", 20)
-    marca = _texto(marca, "a marca", 30)
-    modelo = _texto(modelo, "o modelo", 30)
-    itens_entregues = _texto(itens_entregues, "os itens entregues", 30, False)
+    serial = _texto(maiusculas(serial), "o serial", 15)
+    tipo = _texto(maiusculas(tipo), "o tipo", 20)
+    marca = _texto(maiusculas(marca), "a marca", 30)
+    modelo = _texto(maiusculas(modelo), "o modelo", 30)
+    itens_entregues = _texto(maiusculas(itens_entregues), "os itens entregues", 30, False)
     id_chamado = _numero_positivo(id_chamado, "O chamado GLPI")
     if status not in ("disponivel", "emprestado"):
         raise ErroOperacao("Status inválido.")
@@ -219,11 +221,28 @@ def editar_ativo(serial_original, empresa, serial, patrimonio, tipo, marca,
             else:
                 cursor.execute("SELECT serial_number FROM ativos WHERE serial_number = %s",
                                (serial,))
-                if cursor.fetchone():
+                existente = cursor.fetchone()
+                if existente and existente[0] != serial_original:
                     raise ErroOperacao("Já existe um ativo com o novo serial.")
                 # Cria a nova chave, transfere o histórico e só então remove a antiga.
                 # Isso funciona mesmo quando a FK de empréstimos não tem ON UPDATE CASCADE.
-                if patrimonio and patrimonio == anterior[1]:
+                # Sob collation sem distinção de caixa, o novo serial pode ser
+                # considerado igual ao antigo; nesse caso, usa uma chave temporária.
+                troca_so_de_caixa = serial.casefold() == serial_original.casefold()
+                serial_intermediario = serial
+                if troca_so_de_caixa:
+                    for _ in range(5):
+                        candidato = "TMP" + uuid4().hex[:12].upper()
+                        cursor.execute(
+                            "SELECT serial_number FROM ativos WHERE serial_number = %s",
+                            (candidato,),
+                        )
+                        if cursor.fetchone() is None:
+                            serial_intermediario = candidato
+                            break
+                    else:
+                        raise ErroOperacao("Não foi possível reservar um serial temporário.")
+                if patrimonio and anterior[1] and patrimonio.casefold() == anterior[1].casefold():
                     cursor.execute(
                         "UPDATE ativos SET patrimonio = NULL WHERE serial_number = %s",
                         (serial_original,),
@@ -232,12 +251,32 @@ def editar_ativo(serial_original, empresa, serial, patrimonio, tipo, marca,
                     """INSERT INTO ativos (serial_number, empresa, patrimonio,
                               tipo, marca, modelo, at_status, itens_entregues, id_chamado)
                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (serial, *dados),
+                    (serial_intermediario, *dados),
                 )
                 cursor.execute("UPDATE emprestimos SET id_ativo = %s WHERE id_ativo = %s",
-                               (serial, serial_original))
+                               (serial_intermediario, serial_original))
                 cursor.execute("DELETE FROM ativos WHERE serial_number = %s",
                                (serial_original,))
+                if troca_so_de_caixa:
+                    if patrimonio:
+                        cursor.execute(
+                            "UPDATE ativos SET patrimonio = NULL WHERE serial_number = %s",
+                            (serial_intermediario,),
+                        )
+                    cursor.execute(
+                        """INSERT INTO ativos (serial_number, empresa, patrimonio,
+                                  tipo, marca, modelo, at_status, itens_entregues, id_chamado)
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                        (serial, *dados),
+                    )
+                    cursor.execute(
+                        "UPDATE emprestimos SET id_ativo = %s WHERE id_ativo = %s",
+                        (serial, serial_intermediario),
+                    )
+                    cursor.execute(
+                        "DELETE FROM ativos WHERE serial_number = %s",
+                        (serial_intermediario,),
+                    )
             conexao.commit()
             return serial
         except Exception:
@@ -322,10 +361,12 @@ def registrar_emprestimo(login, serial, condicao_saida, observacoes="", colabora
                 if colaborador is None:
                     raise ErroOperacao("Colaborador não cadastrado. Preencha os dados dele.")
                 pessoa = (
-                    _texto(colaborador.get("nome"), "o nome", 40),
+                    _texto(iniciais_maiusculas(colaborador.get("nome")), "o nome", 40),
                     _texto(colaborador.get("cpf"), "o CPF", 15),
-                    _texto(colaborador.get("departamento"), "o departamento", 30),
-                    _texto(colaborador.get("cargo"), "o cargo", 30),
+                    _texto(iniciais_maiusculas_funcao(colaborador.get("departamento")),
+                           "o departamento", 30),
+                    _texto(iniciais_maiusculas_funcao(colaborador.get("cargo")),
+                           "o cargo", 30),
                     _texto(colaborador.get("campus"), "o campus", 30),
                 )
                 cursor.execute(

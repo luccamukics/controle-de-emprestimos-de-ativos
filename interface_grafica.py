@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from modulos import servicos
+from modulos.formatacao import iniciais_maiusculas, iniciais_maiusculas_funcao, maiusculas
 from modulos.relatorios import caminho_planilha, exportar_para_excel
 
 
@@ -67,15 +68,25 @@ class Formulario(tk.Toplevel):
         )
         self.linha = 1
 
-    def campo(self, rotulo, valor="", combo=None):
+    def campo(self, rotulo, valor="", combo=None, formatar=None):
         ttk.Label(self.corpo, text=rotulo).grid(
             row=self.linha, column=0, sticky="w", padx=(0, 10), pady=6
         )
-        variavel = tk.StringVar(value=str(valor))
+        inicial = "" if valor is None else str(valor)
+        variavel = tk.StringVar(value=formatar(inicial) if formatar else inicial)
         widget = (ttk.Combobox(self.corpo, textvariable=variavel,
                                values=combo, state="readonly") if combo is not None
                   else ttk.Entry(self.corpo, textvariable=variavel))
         widget.grid(row=self.linha, column=1, columnspan=2, sticky="ew", pady=6)
+        if formatar and combo is None:
+            def atualizar(*_args):
+                texto = variavel.get()
+                formatado = formatar(texto)
+                if texto != formatado:
+                    posicao = widget.index(tk.INSERT)
+                    variavel.set(formatado)
+                    widget.icursor(min(posicao, len(formatado)))
+            variavel.trace_add("write", atualizar)
         self.campos[rotulo] = widget
         self.linha += 1
         return variavel
@@ -188,23 +199,24 @@ class Aplicacao(tk.Tk):
     def novo_ativo(self):
         janela = Formulario(self, "Cadastrar ativo")
         empresa = janela.campo("Empresa *", combo=("Arklok", "Vivo"))
-        serial = janela.campo("Serial number *")
-        patrimonio = janela.campo("Patrimônio")
+        serial = janela.campo("Serial number *", formatar=maiusculas)
+        patrimonio = janela.campo("Patrimônio", formatar=maiusculas)
         self.condicionar_patrimonio(janela, empresa, patrimonio)
-        tipo = janela.campo("Tipo *", combo=("notebook", "celular"))
-        marca = janela.campo("Marca *")
-        modelo = janela.campo("Modelo *")
-        itens = janela.campo("Itens entregues")
+        tipo = janela.campo("Tipo *", combo=("NOTEBOOK", "CELULAR"))
+        marca = janela.campo("Marca *", formatar=maiusculas)
+        modelo = janela.campo("Modelo *", formatar=maiusculas)
+        itens = janela.campo("Itens entregues", formatar=maiusculas)
         chamado = janela.campo("Chamado GLPI *")
 
         def salvar():
             def acao():
-                servicos.cadastrar_ativo(serial.get(), tipo.get(), marca.get(),
-                                         modelo.get(), itens.get(), chamado.get(),
-                                         empresa.get(), patrimonio.get())
+                novo_serial = servicos.cadastrar_ativo(
+                    serial.get(), tipo.get(), marca.get(), modelo.get(),
+                    itens.get(), chamado.get(), empresa.get(), patrimonio.get()
+                )
                 janela.destroy()
                 self.atualizar_ativos()
-                self.status.set(f"Ativo {serial.get()} cadastrado com sucesso.")
+                self.status.set(f"Ativo {novo_serial} cadastrado com sucesso.")
             self.executar(acao)
         janela.botoes(salvar, "Cadastrar")
 
@@ -236,15 +248,16 @@ class Aplicacao(tk.Tk):
          chamado_atual) = registro
         janela = Formulario(self, "Editar ativo")
         empresa = janela.campo("Empresa *", empresa_atual, combo=("Arklok", "Vivo"))
-        serial = janela.campo("Serial number *", serial_atual)
-        patrimonio = janela.campo("Patrimônio", patrimonio_atual)
+        serial = janela.campo("Serial number *", serial_atual, formatar=maiusculas)
+        patrimonio = janela.campo("Patrimônio", patrimonio_atual, formatar=maiusculas)
         self.condicionar_patrimonio(janela, empresa, patrimonio)
-        tipo = janela.campo("Tipo *", tipo_atual, combo=("notebook", "celular"))
-        marca = janela.campo("Marca *", marca_atual)
-        modelo = janela.campo("Modelo *", modelo_atual)
+        tipo = janela.campo("Tipo *", tipo_atual,
+                            combo=("NOTEBOOK", "CELULAR"), formatar=maiusculas)
+        marca = janela.campo("Marca *", marca_atual, formatar=maiusculas)
+        modelo = janela.campo("Modelo *", modelo_atual, formatar=maiusculas)
         status = janela.campo("Status *", status_atual,
                               combo=("disponivel", "emprestado"))
-        itens = janela.campo("Itens entregues", itens_atuais)
+        itens = janela.campo("Itens entregues", itens_atuais, formatar=maiusculas)
         chamado = janela.campo("Chamado GLPI *", chamado_atual)
 
         def salvar():
@@ -350,10 +363,12 @@ class Aplicacao(tk.Tk):
             janela = Formulario(self, "Registrar empréstimo", 650)
             janela.geometry("650x690")
             login = janela.campo("Login *")
-            nome = janela.campo("Nome (novo colaborador)")
+            nome = janela.campo("Nome (novo colaborador)",
+                                formatar=iniciais_maiusculas)
             cpf = janela.campo("CPF")
-            departamento = janela.campo("Departamento")
-            cargo = janela.campo("Cargo")
+            departamento = janela.campo("Departamento",
+                                        formatar=iniciais_maiusculas_funcao)
+            cargo = janela.campo("Cargo", formatar=iniciais_maiusculas_funcao)
             campus = janela.campo("Campus")
             opcoes = [f"{a[1]} — {a[0] or 'Sem empresa'} — {a[3]} {a[4]} {a[5]}"
                       for a in ativos]
