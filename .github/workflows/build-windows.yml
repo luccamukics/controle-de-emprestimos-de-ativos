@@ -33,4 +33,5 @@ jobs:
         with:
           name: ControleEmprestimos-Windows
           path: dist/ControleEmprestimos/
+          include-hidden-files: true
           if-no-files-found: error

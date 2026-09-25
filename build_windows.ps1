@@ -12,6 +12,9 @@ Copy-Item "TERMO_RESPONSABILIDADE_MODELO.docx" $destino -Force
 Copy-Item "TERMO_DEVOLUCAO_MODELO.docx" $destino -Force
 Copy-Item ".env.exemplo" $destino -Force
 
+if (Test-Path (Join-Path $destino ".env")) {
+    throw "Por seguranca, o pacote nao pode conter um .env com credenciais."
+}
 if (-not (Test-Path (Join-Path $destino "ControleEmprestimos.exe"))) {
     throw "O executavel nao foi criado."
 }
