@@ -20,8 +20,9 @@ import os
 import mysql.connector
 from mysql.connector import Error
 from dotenv import load_dotenv
+from caminhos import pasta_aplicacao
 
-load_dotenv()  # le as variaveis do arquivo .env
+load_dotenv(pasta_aplicacao() / ".env")
 
 
 def get_connection():

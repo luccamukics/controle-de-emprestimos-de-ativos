@@ -58,6 +58,14 @@ Para usar o menu de texto:
 python main.py --cli
 ```
 
+### Programa para Windows (.exe)
+
+O executável abre a mesma interface gráfica sem precisar iniciar pelo PyCharm ou instalar Python no computador onde será usado. Baixe **ControleEmprestimos-Windows** na seção *Artifacts* da [execução mais recente de Aplicativo Windows](https://github.com/luccamukics/controle-de-emprestimos-de-ativos/actions/workflows/build-windows.yml) e extraia **a pasta inteira** em um local onde você possa salvar arquivos, como Documentos. Abra `ControleEmprestimos.exe` dentro dela.
+
+Na primeira execução, copie `.env.exemplo` para `.env` na mesma pasta do executável e preencha as credenciais do MySQL. O banco deve estar acessível desse computador; `DB_HOST=localhost` funciona apenas se o MySQL estiver nele. Os dois modelos DOCX precisam permanecer ao lado do `.exe`. Termos e planilhas serão criados nessa mesma pasta, em `termos_empréstimos/`, `termos_devolucao/` e `Planilha de Controle/`. O pacote publicado não inclui senha, dados do banco ou documentos gerados.
+
+Para gerar o pacote no seu próprio Windows, execute `powershell -ExecutionPolicy Bypass -File .\build_windows.ps1` na raiz do repositório, com Python instalado. O resultado estará em `dist\ControleEmprestimos\`. Distribua essa pasta inteira; o `.exe` sozinho depende dos arquivos que a acompanham.
+
 Na aba **Ativos**, as colunas Colaborador e Setor mostram quem está com cada ativo emprestado e seu departamento cadastrado; ativos sem empréstimo em aberto ficam com essas células vazias. O botão **Exportar Excel** salva a lista exibida (inclusive o filtro «Somente disponíveis») em `Planilha de Controle/relatorio_ativos.xlsx`. Selecione um equipamento para editá-lo ou excluí-lo. A edição permite alterar todos os dados, inclusive o número de série; empréstimos anteriores passam a referenciar o novo serial. Um ativo com empréstimo em aberto só pode ser excluído depois da devolução. Se houver empréstimos já encerrados, a confirmação de exclusão informa quantos registros históricos também serão apagados do banco. Os termos DOCX gerados anteriormente permanecem nas pastas.
 
 Na aba **Empréstimos**, registre empréstimos ou devoluções e consulte as operações em aberto. A criação de um termo ocorre depois da gravação no banco: se o documento falhar, confira o aviso na interface e o modelo DOCX antes de tentar gerar o termo novamente.

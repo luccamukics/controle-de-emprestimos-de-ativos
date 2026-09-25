@@ -1,5 +1,8 @@
 .env
 .venv/
+build/
+dist/
+*.spec
 
 __pycache__/
 *.pyc
@@ -7,5 +10,6 @@ __pycache__/
 .idea/__pycache__/
 *.pyc
 relatorio_*.xlsx
+Planilha de Controle/
 termos_*/
 .idea/

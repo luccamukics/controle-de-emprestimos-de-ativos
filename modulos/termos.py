@@ -1,8 +1,8 @@
 from docxtpl import DocxTemplate
 import os
-from pathlib import Path
+from caminhos import pasta_aplicacao
 
-PASTA_PROJETO = Path(__file__).resolve().parent.parent
+PASTA_PROJETO = pasta_aplicacao()
 
 def gerar_termo(
 

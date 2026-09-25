@@ -1,0 +1,36 @@
+name: Aplicativo Windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.py"
+      - "modulos/**"
+      - "requirements.txt"
+      - "build_windows.ps1"
+      - "TERMO_*_MODELO.docx"
+      - ".github/workflows/build-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  executavel:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Verificar caminhos de arquivos
+        run: python -m unittest discover -s tests
+      - name: Gerar executavel
+        shell: pwsh
+        run: ./build_windows.ps1
+      - name: Publicar pasta do aplicativo
+        uses: actions/upload-artifact@v4
+        with:
+          name: ControleEmprestimos-Windows
+          path: dist/ControleEmprestimos/
+          if-no-files-found: error

@@ -8,9 +8,10 @@ pip install openpyxl
 from openpyxl import Workbook
 from pathlib import Path
 from modulos import servicos
+from caminhos import pasta_aplicacao
 
 
-PASTA_PLANILHAS = Path(__file__).resolve().parent.parent / "Planilha de Controle"
+PASTA_PLANILHAS = pasta_aplicacao() / "Planilha de Controle"
 
 
 def caminho_planilha(nome_arquivo):

@@ -113,7 +113,17 @@ def main():
 if __name__ == "__main__":
     import sys
 
-    if "--cli" in sys.argv[1:]:
+    if "--verificar-pacote" in sys.argv[1:]:
+        from caminhos import pasta_aplicacao
+        from docxtpl import DocxTemplate
+        from openpyxl import Workbook
+
+        raiz = pasta_aplicacao()
+        for modelo in ("TERMO_RESPONSABILIDADE_MODELO.docx",
+                       "TERMO_DEVOLUCAO_MODELO.docx"):
+            DocxTemplate(str(raiz / modelo))
+        Workbook()
+    elif "--cli" in sys.argv[1:]:
         main()
     else:
         from interface_grafica import main as abrir_interface
