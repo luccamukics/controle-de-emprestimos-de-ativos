@@ -8,7 +8,12 @@ Mantenha seu .env e todos os modelos anteriores.
 Celular: SN é substituído por IMEI 1 e IMEI 2, usando os dados do ativo.
 Notebook: mantém o SN.
 Campos vazios são exibidos como Não informado.
-Os documentos continuam na pasta termos_devolucao.
+Novas devoluções de celular: termos_devolucao_celular.
+Novas devoluções de notebook: termos_devolucao_notebook.
+Ao iniciar main.py ou o novo exe, as duas pastas são criadas.
+A pasta termos_devolucao antiga é renomeada para termos_devolucao_notebook.
+Todos os documentos antigos são preservados nessa pasta; não são classificados automaticamente.
+Se houver arquivos com nomes iguais, recebem um sufixo _anterior.
 Não é necessário alterar o banco de dados.
 Documentos gerados anteriormente não são reescritos.
 

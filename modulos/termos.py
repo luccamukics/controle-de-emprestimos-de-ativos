@@ -24,6 +24,26 @@ def migrar_pastas_emprestimos():
         origem.rmdir()
 
 
+def migrar_pastas_devolucao():
+    """Renomeia a pasta antiga e preserva documentos com nomes repetidos."""
+    origem = PASTA_PROJETO / "termos_devolucao"
+    destino = PASTA_PROJETO / "termos_devolucao_notebook"
+    if origem.exists():
+        if not destino.exists():
+            origem.rename(destino)
+        else:
+            for arquivo in origem.iterdir():
+                novo = destino / arquivo.name
+                contador = 1
+                while novo.exists():
+                    novo = destino / f"{arquivo.stem}_anterior_{contador}{arquivo.suffix}"
+                    contador += 1
+                arquivo.rename(novo)
+            origem.rmdir()
+    destino.mkdir(exist_ok=True)
+    (PASTA_PROJETO / "termos_devolucao_celular").mkdir(exist_ok=True)
+
+
 def gerar_termo(
 
     login,
@@ -170,7 +190,9 @@ def gerar_termo_devolucao(
 
         documento.render(dados)
 
-        pasta = str(PASTA_PROJETO / "termos_devolucao")
+        migrar_pastas_devolucao()
+        pasta = str(PASTA_PROJETO / ("termos_devolucao_celular" if celular
+                                    else "termos_devolucao_notebook"))
 
         if not os.path.exists(pasta):
             os.makedirs(pasta)

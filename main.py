@@ -126,12 +126,14 @@ if __name__ == "__main__":
             DocxTemplate(str(raiz / modelo))
         Workbook()
     elif "--cli" in sys.argv[1:]:
-        from modulos.termos import migrar_pastas_emprestimos
+        from modulos.termos import migrar_pastas_emprestimos, migrar_pastas_devolucao
         migrar_pastas_emprestimos()
+        migrar_pastas_devolucao()
         main()
     else:
         from interface_grafica import main as abrir_interface
 
-        from modulos.termos import migrar_pastas_emprestimos
+        from modulos.termos import migrar_pastas_emprestimos, migrar_pastas_devolucao
         migrar_pastas_emprestimos()
+        migrar_pastas_devolucao()
         abrir_interface()
