@@ -135,10 +135,15 @@ def gerar_termo_devolucao(
     modelo,
     data_devolucao,
     condicao_retorno,
-    chamado_devolucao
+    chamado_devolucao,
+    imei_1=None,
+    imei_2=None
 ):
     try:
-        documento = DocxTemplate(str(PASTA_PROJETO / "TERMO_DEVOLUCAO_MODELO.docx"))
+        celular = str(tipo).strip().casefold() == "celular"
+        modelo_termo = ("TERMO_DEVOLUCAO_CELULAR_MODELO.docx" if celular
+                        else "TERMO_DEVOLUCAO_MODELO.docx")
+        documento = DocxTemplate(str(PASTA_PROJETO / modelo_termo))
 
         dados = {
             "nome": nome,
@@ -148,6 +153,8 @@ def gerar_termo_devolucao(
             "marca": marca,
             "modelo": modelo,
             "serial": serial,
+            "imei_1": imei_1 or "Não informado",
+            "imei_2": imei_2 or "Não informado",
 
             "data_extenso": data_por_extenso(
                 data_devolucao

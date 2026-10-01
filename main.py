@@ -121,7 +121,8 @@ if __name__ == "__main__":
         raiz = pasta_aplicacao()
         for modelo in ("TERMO_RESPONSABILIDADE_MODELO.docx",
                        "TERMO_RESPONSABILIDADE_CELULAR_MODELO.docx",
-                       "TERMO_DEVOLUCAO_MODELO.docx"):
+                       "TERMO_DEVOLUCAO_MODELO.docx",
+                       "TERMO_DEVOLUCAO_CELULAR_MODELO.docx"):
             DocxTemplate(str(raiz / modelo))
         Workbook()
     elif "--cli" in sys.argv[1:]:

@@ -471,7 +471,7 @@ def registrar_devolucao(id_emprestimo, condicao_retorno, chamado_devolucao):
         try:
             cursor.execute(
                 """SELECT e.id_ativo, c.login, c.nome, c.CPF,
-                          a.tipo, a.marca, a.modelo
+                          a.tipo, a.marca, a.modelo, a.imei_1, a.imei_2
                    FROM emprestimos e
                    JOIN colaboradores c ON c.login = e.id_colaborador
                    JOIN ativos a ON a.serial_number = e.id_ativo
@@ -481,7 +481,7 @@ def registrar_devolucao(id_emprestimo, condicao_retorno, chamado_devolucao):
             dados = cursor.fetchone()
             if dados is None:
                 raise ErroOperacao("Empréstimo não encontrado ou já devolvido.")
-            serial, login, nome, cpf, tipo, marca, modelo = dados
+            serial, login, nome, cpf, tipo, marca, modelo, imei_1, imei_2 = dados
             hoje = date.today()
             cursor.execute(
                 """UPDATE emprestimos SET data_devolucao = %s,
@@ -506,7 +506,8 @@ def registrar_devolucao(id_emprestimo, condicao_retorno, chamado_devolucao):
     finally:
         conexao.close()
     caminho = gerar_termo_devolucao(login, nome, cpf, serial, tipo, marca, modelo,
-                                    hoje, condicao_retorno, chamado_devolucao)
+                                    hoje, condicao_retorno, chamado_devolucao,
+                                    imei_1, imei_2)
     return {"id": id_emprestimo, "termo": caminho}
 
 

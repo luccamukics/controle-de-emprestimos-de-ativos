@@ -1,0 +1,27 @@
+ATUALIZAÇÃO DO TERMO DE DEVOLUÇÃO DE CELULAR
+
+Copie o conteúdo desta pasta para a raiz do seu projeto atual.
+Substitua main.py, build_windows.ps1, modulos/termos.py e modulos/servicos.py.
+Adicione TERMO_DEVOLUCAO_CELULAR_MODELO.docx ao lado de main.py.
+Mantenha seu .env e todos os modelos anteriores.
+
+Celular: SN é substituído por IMEI 1 e IMEI 2, usando os dados do ativo.
+Notebook: mantém o SN.
+Campos vazios são exibidos como Não informado.
+Os documentos continuam na pasta termos_devolucao.
+Não é necessário alterar o banco de dados.
+Documentos gerados anteriormente não são reescritos.
+
+Teste pelo main.py ao registrar uma devolução de celular.
+Não registre uma devolução real apenas para testar: use um empréstimo de teste.
+
+Para atualizar o GitHub, na raiz do projeto:
+git add main.py build_windows.ps1 modulos/termos.py modulos/servicos.py TERMO_DEVOLUCAO_CELULAR_MODELO.docx
+git commit -m "Usa IMEIs no termo de devolucao de celular"
+git push origin main
+
+Para gerar o novo exe no Windows:
+powershell -ExecutionPolicy Bypass -File .\build_windows.ps1
+O pacote completo ficará em dist\ControleEmprestimos.
+Copie o exe, _internal e os modelos para a pasta do programa mantendo seu .env.
+Este ZIP é uma atualização do projeto atual, não contém um exe compilado.
