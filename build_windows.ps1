@@ -9,6 +9,7 @@ if ($LASTEXITCODE -ne 0) { throw "Falha ao gerar o executavel." }
 
 $destino = Join-Path $PSScriptRoot "dist\ControleEmprestimos"
 Copy-Item "TERMO_RESPONSABILIDADE_MODELO.docx" $destino -Force
+Copy-Item "TERMO_RESPONSABILIDADE_CELULAR_MODELO.docx" $destino -Force
 Copy-Item "TERMO_DEVOLUCAO_MODELO.docx" $destino -Force
 Copy-Item ".env.exemplo" $destino -Force
 Copy-Item "migracao_dados_celular.sql" $destino -Force

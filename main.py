@@ -120,12 +120,17 @@ if __name__ == "__main__":
 
         raiz = pasta_aplicacao()
         for modelo in ("TERMO_RESPONSABILIDADE_MODELO.docx",
+                       "TERMO_RESPONSABILIDADE_CELULAR_MODELO.docx",
                        "TERMO_DEVOLUCAO_MODELO.docx"):
             DocxTemplate(str(raiz / modelo))
         Workbook()
     elif "--cli" in sys.argv[1:]:
+        from modulos.termos import migrar_pastas_emprestimos
+        migrar_pastas_emprestimos()
         main()
     else:
         from interface_grafica import main as abrir_interface
 
+        from modulos.termos import migrar_pastas_emprestimos
+        migrar_pastas_emprestimos()
         abrir_interface()

@@ -417,13 +417,14 @@ def registrar_emprestimo(login, serial, condicao_saida, observacoes="", colabora
                 )
             nome, cpf, departamento, cargo, campus = pessoa
             cursor.execute(
-                """SELECT tipo, marca, modelo, at_status, itens_entregues, id_chamado
+                """SELECT tipo, marca, modelo, at_status, itens_entregues, id_chamado,
+                          imei_1, imei_2, numero_celular
                    FROM ativos WHERE serial_number = %s FOR UPDATE""", (serial,)
             )
             ativo = cursor.fetchone()
             if ativo is None:
                 raise ErroOperacao("Ativo não encontrado.")
-            tipo, marca, modelo, status, itens, chamado = ativo
+            tipo, marca, modelo, status, itens, chamado, imei_1, imei_2, numero_celular = ativo
             if status != "disponivel":
                 raise ErroOperacao("Este ativo não está disponível.")
             cursor.execute(
@@ -455,7 +456,8 @@ def registrar_emprestimo(login, serial, condicao_saida, observacoes="", colabora
         conexao.close()
     # A geração do documento ocorre após a confirmação no banco, como no menu antigo.
     caminho = gerar_termo(login, nome, cpf, departamento, cargo, campus,
-                          serial, tipo, marca, modelo, itens, chamado)
+                          serial, tipo, marca, modelo, itens, chamado,
+                          imei_1, imei_2, numero_celular)
     return {"id": id_emprestimo, "termo": caminho}
 
 
@@ -513,7 +515,7 @@ def reimprimir_termo(id_emprestimo):
     linhas = _consultar(
         """SELECT c.login, c.nome, c.CPF, c.departamento, c.cargo, c.campus,
                   a.serial_number, a.tipo, a.marca, a.modelo,
-                  a.itens_entregues, a.id_chamado
+                  a.itens_entregues, a.id_chamado, a.imei_1, a.imei_2, a.numero_celular
            FROM emprestimos e
            JOIN colaboradores c ON c.login = e.id_colaborador
            JOIN ativos a ON a.serial_number = e.id_ativo

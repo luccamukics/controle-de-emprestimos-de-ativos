@@ -4,6 +4,26 @@ from caminhos import pasta_aplicacao
 
 PASTA_PROJETO = pasta_aplicacao()
 
+def migrar_pastas_emprestimos():
+    """Preserva arquivos antigos; nunca substitui termos com nomes iguais."""
+    destino = PASTA_PROJETO / "Termos_emprestimos_notebooks"
+    for nome in ("Termos_emprestimos", "termos_emprestimos", "termos_empréstimos"):
+        origem = PASTA_PROJETO / nome
+        if not origem.exists():
+            continue
+        if not destino.exists():
+            origem.rename(destino)
+            continue
+        for arquivo in origem.iterdir():
+            novo = destino / arquivo.name
+            contador = 1
+            while novo.exists():
+                novo = destino / f"{arquivo.stem}_anterior_{contador}{arquivo.suffix}"
+                contador += 1
+            arquivo.rename(novo)
+        origem.rmdir()
+
+
 def gerar_termo(
 
     login,
@@ -17,11 +37,17 @@ def gerar_termo(
     marca,
     modelo,
     itens_entregues,
-    id_chamado
+    id_chamado,
+    imei_1=None,
+    imei_2=None,
+    numero_celular=None
 ):
 
     try:
-        documento = DocxTemplate(str(PASTA_PROJETO / "TERMO_RESPONSABILIDADE_MODELO.docx"))
+        celular = str(tipo).strip().casefold() == "celular"
+        modelo_termo = ("TERMO_RESPONSABILIDADE_CELULAR_MODELO.docx" if celular
+                        else "TERMO_RESPONSABILIDADE_MODELO.docx")
+        documento = DocxTemplate(str(PASTA_PROJETO / modelo_termo))
 
         dados = {
             "nome": nome,
@@ -33,12 +59,17 @@ def gerar_termo(
             "modelo": f"{tipo} {marca} {modelo}",
             "serial": serial,
             "itens_entregues": itens_entregues,
+            "imei_1": imei_1 or "Não informado",
+            "imei_2": imei_2 or "Não informado",
+            "numero_celular": numero_celular or "Não informado",
             "id_chamado": id_chamado
         }
 
         documento.render(dados)
 
-        pasta = str(PASTA_PROJETO / "termos_empréstimos")
+        migrar_pastas_emprestimos()
+        pasta = str(PASTA_PROJETO / ("Termos_empréstimos_celulares" if celular
+                                    else "Termos_emprestimos_notebooks"))
 
         if not os.path.exists(pasta):
             os.makedirs(pasta)
